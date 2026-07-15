@@ -1,0 +1,11 @@
+import { redirect } from "next/navigation";
+import { AppFrame } from "@/components/app-frame";
+import { SubpageHeader } from "@/components/subpage-header";
+import { getOrders } from "@/lib/dashboard";
+import { formatMoney } from "@/lib/utils";
+import { getSession } from "@/lib/auth";
+import { createTranslator } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+
+const statusLabel: Record<string, string> = { PAID: "已支付", PREPARING: "制作中", READY: "可取货", COMPLETED: "已完成" };
+export default async function OrdersPage() { const [session, locale] = await Promise.all([getSession(), getLocale()]); if (!session) redirect("/login?next=%2Fprofile%2Forders"); const [orders] = await Promise.all([getOrders()]); const t = createTranslator(locale); return <AppFrame><SubpageHeader back="/profile" title={t("历史订单")} width="max-w-3xl" /><main className="mx-auto max-w-3xl space-y-4 px-5 py-8">{orders.length === 0 && <section className="rounded-[1.5rem] border bg-white p-8 text-center"><p className="font-medium">{t("还没有历史订单")}</p><p className="mt-2 text-sm text-zinc-500">{t("完成第一笔点单后，订单会保存在这里。")}</p><a href="/menu" className="mt-5 inline-flex min-h-11 items-center rounded-full bg-black px-5 text-sm text-white">{t("去点一杯")}</a></section>}{orders.map((order) => <article key={order.id} className="rounded-[1.5rem] border bg-white p-5"><div className="flex items-start justify-between"><div><p className="font-mono text-xs text-zinc-400">{order.orderNumber}</p><p className="mt-2 text-sm text-zinc-500">{order.createdAt.toLocaleString(locale === "zh" ? "zh-CN" : "en-US", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p></div><span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium">{t(statusLabel[order.status] ?? order.status)}</span></div><div className="my-5 border-y py-4 text-sm leading-7">{order.items.map((item) => <div key={`${order.id}-${item.productName}`} className="flex justify-between"><span>{t(item.productName)}</span><span className="text-zinc-400">× {item.quantity}</span></div>)}</div><div className="flex items-center justify-between"><span className="text-sm text-zinc-500">{t("实付")}</span><span className="font-mono text-lg font-semibold">{formatMoney(order.totalAmount)}</span></div></article>)}</main></AppFrame>; }
