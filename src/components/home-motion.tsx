@@ -32,11 +32,9 @@ export function HomeMotion({ children }: { children: React.ReactNode }) {
             .from("[data-hero-line]", { yPercent: 115, rotation: 2, duration: 0.85, stagger: 0.1 }, "-=0.3")
             .from("[data-hero-copy]", { y: 24, autoAlpha: 0, duration: 0.7 }, "-=0.45")
             .from("[data-hero-action]", { y: 18, autoAlpha: 0, duration: 0.55, stagger: 0.08 }, "-=0.42")
-            .from("[data-hero-meta]", { y: 14, autoAlpha: 0, duration: 0.55, stagger: 0.08 }, "-=0.3")
             .from("[data-hero-visual]", { xPercent: 4, autoAlpha: 0, duration: 0.85 }, 0.1)
             .from("[data-hero-visual-copy]", { y: 18, autoAlpha: 0, duration: 0.6 }, 0.45)
-            .from("[data-hero-art-shell]", { scale: 0.82, rotation: -5, autoAlpha: 0, duration: 1, ease: "back.out(1.35)" }, 0.35)
-            .from("[data-hero-badge]", { scale: 0.55, rotation: -16, autoAlpha: 0, duration: 0.65, ease: "back.out(1.8)" }, 0.82);
+            .from("[data-hero-art-shell]", { scale: 0.82, rotation: -5, autoAlpha: 0, duration: 1, ease: "back.out(1.35)" }, 0.35);
 
           gsap.utils.toArray<HTMLElement>("[data-reveal]", scope.current).forEach((element) => {
             gsap.from(element, {

@@ -1,4 +1,4 @@
-import { ArrowRight, Clock3, MapPin } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
 import { HomeMotion } from "@/components/home-motion";
 import { SiteHeader } from "@/components/site-header";
@@ -34,10 +34,6 @@ export default async function HomePage() {
               <TrackedLink data-hero-action data-magnetic href="/menu" eventName="home_cta_clicked" eventProperties={{ cta_name: "order_now", target_path: "/menu" }} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-black px-6 text-sm font-medium text-white transition hover:bg-zinc-800">{t("立即点单")}<ArrowRight className="size-4" /></TrackedLink>
               <TrackedLink data-hero-action href="/shop" eventName="home_cta_clicked" eventProperties={{ cta_name: "shop_now", target_path: "/shop" }} className="inline-flex min-h-12 items-center justify-center rounded-full border bg-white px-6 text-sm font-medium transition hover:bg-zinc-50">{t("逛逛商店")}</TrackedLink>
             </div>
-            <div className="mt-10 flex flex-wrap gap-x-6 gap-y-3 border-t pt-6 text-xs text-zinc-500">
-              <span data-hero-meta className="flex items-center gap-2"><Clock3 className="size-4 text-black" />{t("预计 15 分钟出杯")}</span>
-              <span data-hero-meta className="flex items-center gap-2"><MapPin className="size-4 text-black" />{t("上海市安福路 108 号")}</span>
-            </div>
           </div>
 
           <div data-hero-visual className="relative min-h-[430px] overflow-hidden bg-black p-6 md:min-h-[520px] md:p-9 lg:min-h-[590px]">
@@ -48,7 +44,6 @@ export default async function HomePage() {
             <div data-hero-art-shell className="absolute inset-x-[14%] bottom-[12%] aspect-square overflow-hidden rounded-[1.75rem] bg-[#f5efe4] shadow-2xl shadow-black/30 will-change-transform md:inset-x-[18%] md:bottom-[8%]">
               <CoffeeArtwork position="0% 0%" interactive />
             </div>
-            <div data-hero-badge className="absolute bottom-10 right-10 z-10 flex size-16 items-center justify-center rounded-full bg-white text-center font-mono text-[10px] leading-4 will-change-transform md:bottom-14 md:right-14">15 MIN<br />PICKUP</div>
           </div>
         </div>
       </section>
