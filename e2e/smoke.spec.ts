@@ -15,6 +15,13 @@ test("mobile menu, cart and direct checkout flow", async ({ page }) => {
   await expect(page.getByText("点单购物车")).toBeVisible();
   await page.getByRole("link", { name: "去结算" }).click();
   await expect(page.getByText("门店自取")).toBeVisible();
+  await expect(page.getByText("购物卡余额")).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "使用购物卡" })).toBeDisabled();
+});
+
+test("gift card account requires login", async ({ page }) => {
+  await page.goto("/profile/gift-card");
+  await expect(page).toHaveURL(/\/login\?next=%2Fprofile%2Fgift-card/);
 });
 
 test("shop cart stays separate", async ({ page }) => {
