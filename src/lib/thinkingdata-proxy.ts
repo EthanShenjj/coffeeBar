@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 function thinkingDataBaseUrl() {
   return process.env.NEXT_PUBLIC_THINKINGDATA_SERVER_URL?.replace(/\/$/, "");
@@ -18,18 +18,22 @@ export async function proxyThinkingDataRequest(request: Request, path: "config" 
   const contentType = request.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
 
-  const response = await fetch(targetUrl, {
+  const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
+  const init: RequestInit = {
     method: request.method,
     headers,
-    body: request.method === "GET" || request.method === "HEAD" ? undefined : await request.text(),
+    body,
     cache: "no-store",
+  };
+
+  after(async () => {
+    await fetch(targetUrl, init).catch(() => undefined);
   });
 
-  return new Response(await response.text(), {
-    status: response.status,
+  return new Response(null, {
+    status: 204,
     headers: {
       "cache-control": "no-store",
-      "content-type": response.headers.get("content-type") ?? "text/plain; charset=utf-8",
     },
   });
 }

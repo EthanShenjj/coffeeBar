@@ -94,6 +94,7 @@ function initializeThinkingDataClient(client: ThinkingDataClient) {
       serverUrl: window.location.origin,
       autoTrack: false,
       batch: false,
+      disableRConfig: true,
       send_method: "ajax",
       showLog: process.env.NODE_ENV !== "production",
     });
