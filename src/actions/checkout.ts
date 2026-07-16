@@ -21,6 +21,52 @@ export type CheckoutResult =
     }
   | { ok: false; message: string };
 
+type ExistingCheckoutOrder = {
+  id: string;
+  orderNumber: string;
+  userId: string;
+  totalAmount: number;
+  payment: {
+    giftCardAmount: number;
+    externalAmount: number;
+  } | null;
+};
+
+function resultFromExistingOrder(
+  order: ExistingCheckoutOrder,
+  userId: string,
+): CheckoutResult {
+  if (order.userId !== userId) {
+    return { ok: false, message: "结算令牌不可用" };
+  }
+  return {
+    ok: true,
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    totalAmount: order.totalAmount,
+    giftCardAmount: order.payment?.giftCardAmount ?? 0,
+    externalAmount: order.payment?.externalAmount ?? order.totalAmount,
+    demo: false,
+  };
+}
+
+const checkoutErrorMessages = new Set([
+  "购物卡余额已变化，请重试支付",
+  "餐饮与商店商品不能混合结算",
+  "商品规格已变化，请重新选择",
+]);
+
+function checkoutErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) return "支付未完成，请稍后重试";
+  if (checkoutErrorMessages.has(error.message)
+    || /^请选择.+$/u.test(error.message)
+    || /^.+选择数量超出限制$/u.test(error.message)
+    || /^.+库存不足$/u.test(error.message)) {
+    return error.message;
+  }
+  return "支付未完成，请稍后重试";
+}
+
 export async function confirmCheckout(raw: unknown): Promise<CheckoutResult> {
   const parsed = checkoutSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "结算信息有误" };
@@ -57,16 +103,7 @@ export async function confirmCheckout(raw: unknown): Promise<CheckoutResult> {
       include: { payment: true },
     });
     if (existing) {
-      if (existing.userId !== user.id) return { ok: false, message: "结算令牌不可用" };
-      return {
-        ok: true,
-        orderId: existing.id,
-        orderNumber: existing.orderNumber,
-        totalAmount: existing.totalAmount,
-        giftCardAmount: existing.payment?.giftCardAmount ?? 0,
-        externalAmount: existing.payment?.externalAmount ?? existing.totalAmount,
-        demo: false,
-      };
+      return resultFromExistingOrder(existing, user.id);
     }
 
     const productIds = [...new Set(input.items.map((item) => item.productId))];
@@ -99,69 +136,82 @@ export async function confirmCheckout(raw: unknown): Promise<CheckoutResult> {
     const totalAmount = snapshots.reduce((sum, item) => sum + item.subtotal, 0);
     const now = new Date();
 
-    const { order, split } = await db.$transaction(async (tx) => {
-      for (const item of snapshots) {
-        if (item.product.stock !== null) {
-          const updated = await tx.product.updateMany({
-            where: { id: item.product.id, stock: { gte: item.quantity }, isAvailable: true },
-            data: { stock: { decrement: item.quantity } },
-          });
-          if (updated.count !== 1) throw new Error(`${item.product.name}库存不足`);
+    let transactionResult;
+    try {
+      transactionResult = await db.$transaction(async (tx) => {
+        for (const item of snapshots) {
+          if (item.product.stock !== null) {
+            const updated = await tx.product.updateMany({
+              where: { id: item.product.id, stock: { gte: item.quantity }, isAvailable: true },
+              data: { stock: { decrement: item.quantity } },
+            });
+            if (updated.count !== 1) throw new Error(`${item.product.name}库存不足`);
+          }
         }
-      }
-      const split = await reserveGiftCardPayment(tx, {
-        userId: user.id,
-        totalAmount,
-        useGiftCard: input.useGiftCard,
-      });
-      const order = await tx.order.create({
-        data: {
-          orderNumber: formatOrderNumber(now),
-          checkoutToken: input.token,
+        const split = await reserveGiftCardPayment(tx, {
           userId: user.id,
-          kind: input.kind,
           totalAmount,
-          pickupName: input.pickupName,
-          pickupPhone: input.pickupPhone,
-          pickupAt: new Date(input.pickupAt),
-          note: input.note,
-          paidAt: now,
-          items: {
-            create: snapshots.map((item) => ({
-              productId: item.product.id,
-              productName: item.product.name,
-              productImage: item.product.imageUrl,
-              category: item.product.category,
-              unitPrice: item.unitPrice,
-              quantity: item.quantity,
-              options: item.options,
-              subtotal: item.subtotal,
-            })),
-          },
-          payment: {
-            create: {
-              amount: totalAmount,
-              giftCardAmount: split.giftCardAmount,
-              externalAmount: split.externalAmount,
-              providerRef: split.externalAmount > 0 ? `SIM-${input.token}` : null,
-              paidAt: now,
+          useGiftCard: input.useGiftCard,
+        });
+        const order = await tx.order.create({
+          data: {
+            orderNumber: formatOrderNumber(now),
+            checkoutToken: input.token,
+            userId: user.id,
+            kind: input.kind,
+            totalAmount,
+            pickupName: input.pickupName,
+            pickupPhone: input.pickupPhone,
+            pickupAt: new Date(input.pickupAt),
+            note: input.note,
+            paidAt: now,
+            items: {
+              create: snapshots.map((item) => ({
+                productId: item.product.id,
+                productName: item.product.name,
+                productImage: item.product.imageUrl,
+                category: item.product.category,
+                unitPrice: item.unitPrice,
+                quantity: item.quantity,
+                options: item.options,
+                subtotal: item.subtotal,
+              })),
+            },
+            payment: {
+              create: {
+                amount: totalAmount,
+                giftCardAmount: split.giftCardAmount,
+                externalAmount: split.externalAmount,
+                providerRef: split.externalAmount > 0 ? `SIM-${input.token}` : null,
+                paidAt: now,
+              },
             },
           },
-        },
-      });
-      if (split.giftCardAmount > 0 && split.accountId) {
-        await tx.giftCardTransaction.create({
-          data: {
-            accountId: split.accountId,
-            type: "PURCHASE",
-            amount: -split.giftCardAmount,
-            reference: `PURCHASE:${input.token}`,
-            orderId: order.id,
-          },
         });
+        if (split.giftCardAmount > 0 && split.accountId) {
+          await tx.giftCardTransaction.create({
+            data: {
+              accountId: split.accountId,
+              type: "PURCHASE",
+              amount: -split.giftCardAmount,
+              reference: `PURCHASE:${input.token}`,
+              orderId: order.id,
+            },
+          });
+        }
+        return { order, split };
+      });
+    } catch (transactionError) {
+      const winningOrder = await db.order.findUnique({
+        where: { checkoutToken: input.token },
+        include: { payment: true },
+      });
+      if (winningOrder) {
+        return resultFromExistingOrder(winningOrder, user.id);
       }
-      return { order, split };
-    });
+      throw transactionError;
+    }
+    const { order, split } = transactionResult;
     updateTag(PRODUCT_CATALOG_CACHE_TAG);
     revalidatePath("/profile");
     revalidatePath("/profile/orders");
@@ -178,6 +228,6 @@ export async function confirmCheckout(raw: unknown): Promise<CheckoutResult> {
       demo: false,
     };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "支付未完成，请稍后重试" };
+    return { ok: false, message: checkoutErrorMessage(error) };
   }
 }
