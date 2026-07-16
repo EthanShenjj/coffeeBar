@@ -7,9 +7,18 @@ import { DEMO_PRODUCTS } from "@/lib/demo-data";
 import { formatOrderNumber } from "@/lib/utils";
 import { getDb, hasDatabase } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { reserveGiftCardPayment } from "@/lib/gift-card-service";
 
 export type CheckoutResult =
-  | { ok: true; orderId: string; orderNumber: string; totalAmount: number; demo: boolean }
+  | {
+      ok: true;
+      orderId: string;
+      orderNumber: string;
+      totalAmount: number;
+      giftCardAmount: number;
+      externalAmount: number;
+      demo: boolean;
+    }
   | { ok: false; message: string };
 
 export async function confirmCheckout(raw: unknown): Promise<CheckoutResult> {
@@ -18,6 +27,9 @@ export async function confirmCheckout(raw: unknown): Promise<CheckoutResult> {
   const input = parsed.data;
 
   if (!hasDatabase()) {
+    if (input.useGiftCard) {
+      return { ok: false, message: "配置数据库后可使用购物卡" };
+    }
     const total = input.items.reduce((sum, item) => {
       const product = DEMO_PRODUCTS.find((entry) => entry.id === item.productId);
       if (!product || product.channel !== input.kind) return sum;
@@ -26,16 +38,35 @@ export async function confirmCheckout(raw: unknown): Promise<CheckoutResult> {
       return sum + (product.price + delta) * item.quantity;
     }, 0);
     if (!total) return { ok: false, message: "商品已失效，请重新选择" };
-    return { ok: true, orderId: `demo-${input.token}`, orderNumber: formatOrderNumber(), totalAmount: total, demo: true };
+    return {
+      ok: true,
+      orderId: `demo-${input.token}`,
+      orderNumber: formatOrderNumber(),
+      totalAmount: total,
+      giftCardAmount: 0,
+      externalAmount: total,
+      demo: true,
+    };
   }
 
   try {
     const user = await requireUser();
     const db = getDb();
-    const existing = await db.order.findUnique({ where: { checkoutToken: input.token } });
+    const existing = await db.order.findUnique({
+      where: { checkoutToken: input.token },
+      include: { payment: true },
+    });
     if (existing) {
       if (existing.userId !== user.id) return { ok: false, message: "结算令牌不可用" };
-      return { ok: true, orderId: existing.id, orderNumber: existing.orderNumber, totalAmount: existing.totalAmount, demo: false };
+      return {
+        ok: true,
+        orderId: existing.id,
+        orderNumber: existing.orderNumber,
+        totalAmount: existing.totalAmount,
+        giftCardAmount: existing.payment?.giftCardAmount ?? 0,
+        externalAmount: existing.payment?.externalAmount ?? existing.totalAmount,
+        demo: false,
+      };
     }
 
     const productIds = [...new Set(input.items.map((item) => item.productId))];
@@ -68,7 +99,7 @@ export async function confirmCheckout(raw: unknown): Promise<CheckoutResult> {
     const totalAmount = snapshots.reduce((sum, item) => sum + item.subtotal, 0);
     const now = new Date();
 
-    const order = await db.$transaction(async (tx) => {
+    const { order, split } = await db.$transaction(async (tx) => {
       for (const item of snapshots) {
         if (item.product.stock !== null) {
           const updated = await tx.product.updateMany({
@@ -78,7 +109,12 @@ export async function confirmCheckout(raw: unknown): Promise<CheckoutResult> {
           if (updated.count !== 1) throw new Error(`${item.product.name}库存不足`);
         }
       }
-      return tx.order.create({
+      const split = await reserveGiftCardPayment(tx, {
+        userId: user.id,
+        totalAmount,
+        useGiftCard: input.useGiftCard,
+      });
+      const order = await tx.order.create({
         data: {
           orderNumber: formatOrderNumber(now),
           checkoutToken: input.token,
@@ -105,18 +141,42 @@ export async function confirmCheckout(raw: unknown): Promise<CheckoutResult> {
           payment: {
             create: {
               amount: totalAmount,
-              providerRef: `SIM-${input.token}`,
+              giftCardAmount: split.giftCardAmount,
+              externalAmount: split.externalAmount,
+              providerRef: split.externalAmount > 0 ? `SIM-${input.token}` : null,
               paidAt: now,
             },
           },
         },
       });
+      if (split.giftCardAmount > 0 && split.accountId) {
+        await tx.giftCardTransaction.create({
+          data: {
+            accountId: split.accountId,
+            type: "PURCHASE",
+            amount: -split.giftCardAmount,
+            reference: `PURCHASE:${input.token}`,
+            orderId: order.id,
+          },
+        });
+      }
+      return { order, split };
     });
     updateTag(PRODUCT_CATALOG_CACHE_TAG);
     revalidatePath("/profile");
     revalidatePath("/profile/orders");
+    revalidatePath("/profile/gift-card");
+    revalidatePath("/checkout");
     revalidatePath("/admin");
-    return { ok: true, orderId: order.id, orderNumber: order.orderNumber, totalAmount, demo: false };
+    return {
+      ok: true,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      totalAmount,
+      giftCardAmount: split.giftCardAmount,
+      externalAmount: split.externalAmount,
+      demo: false,
+    };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "支付未完成，请稍后重试" };
   }

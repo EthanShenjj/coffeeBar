@@ -1,6 +1,9 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { describe, expect, it, vi } from "vitest";
-import { creditGiftCard } from "@/lib/gift-card-service";
+import {
+  creditGiftCard,
+  reserveGiftCardPayment,
+} from "@/lib/gift-card-service";
 
 function createFakeTransaction() {
   const giftCardTransaction = {
@@ -104,5 +107,66 @@ describe("creditGiftCard", () => {
       reference: "RECHARGE:token-1",
     })).rejects.toThrow("充值令牌不可用");
     expect(giftCardAccount.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("reserveGiftCardPayment", () => {
+  it("returns the external-only split without touching an account when opted out", async () => {
+    const { tx, giftCardAccount } = createFakeTransaction();
+
+    const result = await reserveGiftCardPayment(tx, {
+      userId: "user-1",
+      totalAmount: 12_800,
+      useGiftCard: false,
+    });
+
+    expect(result).toEqual({
+      giftCardAmount: 0,
+      externalAmount: 12_800,
+      accountId: null,
+    });
+    expect(giftCardAccount.upsert).not.toHaveBeenCalled();
+  });
+
+  it("reserves the available balance for a mixed payment", async () => {
+    const { tx, giftCardAccount } = createFakeTransaction();
+    giftCardAccount.upsert.mockResolvedValueOnce({
+      id: "card-1",
+      userId: "user-1",
+      balance: 10_000,
+    });
+    giftCardAccount.updateMany.mockResolvedValueOnce({ count: 1 });
+
+    const result = await reserveGiftCardPayment(tx, {
+      userId: "user-1",
+      totalAmount: 12_800,
+      useGiftCard: true,
+    });
+
+    expect(result).toEqual({
+      giftCardAmount: 10_000,
+      externalAmount: 2_800,
+      accountId: "card-1",
+    });
+    expect(giftCardAccount.updateMany).toHaveBeenCalledWith({
+      where: { id: "card-1", balance: { gte: 10_000 } },
+      data: { balance: { decrement: 10_000 } },
+    });
+  });
+
+  it("rejects when the balance changes before it can be reserved", async () => {
+    const { tx, giftCardAccount } = createFakeTransaction();
+    giftCardAccount.upsert.mockResolvedValueOnce({
+      id: "card-1",
+      userId: "user-1",
+      balance: 10_000,
+    });
+    giftCardAccount.updateMany.mockResolvedValueOnce({ count: 0 });
+
+    await expect(reserveGiftCardPayment(tx, {
+      userId: "user-1",
+      totalAmount: 12_800,
+      useGiftCard: true,
+    })).rejects.toThrow("购物卡余额已变化，请重试支付");
   });
 });

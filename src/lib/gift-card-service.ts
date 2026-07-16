@@ -1,9 +1,23 @@
 import type { Prisma } from "@/generated/prisma/client";
+import {
+  calculatePaymentSplit,
+  type PaymentSplit,
+} from "@/lib/gift-card";
 
 type CreditGiftCardInput = {
   userId: string;
   amount: number;
   reference: string;
+};
+
+type ReserveGiftCardPaymentInput = {
+  userId: string;
+  totalAmount: number;
+  useGiftCard: boolean;
+};
+
+export type ReservedGiftCardPayment = PaymentSplit & {
+  accountId: string | null;
 };
 
 type RechargeTransaction = {
@@ -69,4 +83,44 @@ export async function creditGiftCard(
     data: { balance: { increment: input.amount } },
   });
   return { balance: updated.balance, duplicate: false } as const;
+}
+
+export async function reserveGiftCardPayment(
+  tx: Prisma.TransactionClient,
+  input: ReserveGiftCardPaymentInput,
+): Promise<ReservedGiftCardPayment> {
+  if (!input.useGiftCard) {
+    return {
+      ...calculatePaymentSplit(input.totalAmount, 0, false),
+      accountId: null,
+    };
+  }
+
+  const account = await tx.giftCardAccount.upsert({
+    where: { userId: input.userId },
+    update: {},
+    create: { userId: input.userId },
+  });
+  const split = calculatePaymentSplit(
+    input.totalAmount,
+    account.balance,
+    true,
+  );
+
+  if (split.giftCardAmount === 0) {
+    return { ...split, accountId: account.id };
+  }
+
+  const updated = await tx.giftCardAccount.updateMany({
+    where: {
+      id: account.id,
+      balance: { gte: split.giftCardAmount },
+    },
+    data: { balance: { decrement: split.giftCardAmount } },
+  });
+  if (updated.count !== 1) {
+    throw new Error("购物卡余额已变化，请重试支付");
+  }
+
+  return { ...split, accountId: account.id };
 }

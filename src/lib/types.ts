@@ -46,5 +46,6 @@ export type CheckoutInput = {
   pickupPhone: string;
   pickupAt: string;
   note?: string;
+  useGiftCard: boolean;
   items: Array<{ productId: string; quantity: number; optionIds: string[] }>;
 };
