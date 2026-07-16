@@ -1,3 +1,5 @@
+BEGIN;
+
 -- CreateEnum
 CREATE TYPE "GiftCardTransactionType" AS ENUM ('RECHARGE', 'PURCHASE');
 
@@ -54,3 +56,5 @@ ALTER TABLE "GiftCardTransaction" ADD CONSTRAINT "GiftCardTransaction_accountId_
 
 -- AddForeignKey
 ALTER TABLE "GiftCardTransaction" ADD CONSTRAINT "GiftCardTransaction_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+COMMIT;
