@@ -27,9 +27,15 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       return toast.error(result.error.message ?? t("操作失败"));
     }
     identifyAnalytics(result.data?.user?.id, { auth_mode: mode });
-    trackAnalytics(mode === "login" ? "login" : "regist", { auth_mode: mode, has_next: Boolean(params.get("next")) });
+    const authProperties = { auth_mode: mode, has_next: Boolean(params.get("next")) };
+    if (mode === "signup") {
+      trackAnalytics("regist", { ...authProperties, regist_method: "email_password" });
+      trackAnalytics("login", { ...authProperties, login_method: "signup_auto_login" });
+    } else {
+      trackAnalytics("login", { ...authProperties, login_method: "email_password" });
+    }
     toast.success(t(mode === "login" ? "欢迎回来" : "注册成功，欢迎加入 CoffeeBar"));
-    router.push(params.get("next") || "/profile"); router.refresh();
+    router.push(params.get("next") || "/"); router.refresh();
   }
   const next = params.get("next");
   const alternatePath = mode === "login" ? "/register" : "/login";

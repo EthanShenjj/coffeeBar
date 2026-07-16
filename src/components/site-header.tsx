@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ShoppingBag, UserRound } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 import { CartCount } from "@/components/cart-count";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { UserMenu } from "@/components/user-menu";
 import { getSession } from "@/lib/auth";
 import { getTranslator } from "@/lib/i18n-server";
 import type { CartKind } from "@/lib/types";
@@ -16,7 +17,7 @@ export async function SiteHeader({ cartKind = "MENU", session: providedSession }
         <Link href="/" className="text-lg font-semibold tracking-[-0.06em]">COFFEEBAR<span className="ml-1 text-zinc-400">/</span></Link>
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
-          {session ? <Link href="/profile" className="flex h-11 items-center gap-2 rounded-full border bg-white px-3 text-xs hover:bg-zinc-50"><UserRound className="size-4" /><span className="hidden sm:inline">{session.user.name}</span></Link> : <Link href="/login" className="hidden h-11 items-center rounded-full border bg-white px-4 text-xs font-medium hover:bg-zinc-50 sm:flex">{t("登录 / 注册")}</Link>}
+          {session ? <UserMenu name={session.user.name} image={session.user.image} /> : <Link href="/login" className="hidden h-11 items-center rounded-full border bg-white px-4 text-xs font-medium hover:bg-zinc-50 sm:flex">{t("登录 / 注册")}</Link>}
           <Link href={`/cart?kind=${cartKind}`} className="relative flex size-11 items-center justify-center rounded-full bg-black text-white" aria-label={t("购物车")}>
             <ShoppingBag className="size-4" />
             <CartCount kind={cartKind} />
