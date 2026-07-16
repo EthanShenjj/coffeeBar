@@ -33,6 +33,11 @@ enum PaymentStatus {
   SUCCEEDED
 }
 
+enum GiftCardTransactionType {
+  RECHARGE
+  PURCHASE
+}
+
 enum AnnouncementStatus {
   DRAFT
   PUBLISHED
@@ -54,6 +59,7 @@ model User {
   carts         Cart[]
   orders        Order[]
   messageReads  MessageReceipt[]
+  giftCardAccount GiftCardAccount?
 
   @@map("user")
 }
@@ -207,6 +213,7 @@ model Order {
   user          User         @relation(fields: [userId], references: [id])
   items         OrderItem[]
   payment       Payment?
+  giftCardTransaction GiftCardTransaction?
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -229,13 +236,39 @@ model OrderItem {
 }
 
 model Payment {
-  id          String        @id @default(cuid())
-  orderId     String        @unique
-  amount      Int
-  status      PaymentStatus @default(SUCCEEDED)
-  providerRef String        @unique
-  paidAt      DateTime      @default(now())
-  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id             String        @id @default(cuid())
+  orderId        String        @unique
+  amount         Int
+  giftCardAmount Int           @default(0)
+  externalAmount Int
+  status         PaymentStatus @default(SUCCEEDED)
+  providerRef    String?       @unique
+  paidAt         DateTime      @default(now())
+  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model GiftCardAccount {
+  id           String                @id @default(cuid())
+  userId       String                @unique
+  balance      Int                   @default(0)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions GiftCardTransaction[]
+}
+
+model GiftCardTransaction {
+  id        String                  @id @default(cuid())
+  accountId String
+  type      GiftCardTransactionType
+  amount    Int
+  reference String                  @unique
+  orderId   String?                 @unique
+  createdAt DateTime                @default(now())
+  account   GiftCardAccount         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  order     Order?                  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([accountId, createdAt])
 }
 
 model Announcement {

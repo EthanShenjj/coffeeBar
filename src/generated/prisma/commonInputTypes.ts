@@ -338,6 +338,23 @@ export type EnumPaymentStatusWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumPaymentStatusFilter<$PrismaModel>
 }
 
+export type EnumGiftCardTransactionTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.GiftCardTransactionType | Prisma.EnumGiftCardTransactionTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.GiftCardTransactionType[] | Prisma.ListEnumGiftCardTransactionTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GiftCardTransactionType[] | Prisma.ListEnumGiftCardTransactionTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGiftCardTransactionTypeFilter<$PrismaModel> | $Enums.GiftCardTransactionType
+}
+
+export type EnumGiftCardTransactionTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.GiftCardTransactionType | Prisma.EnumGiftCardTransactionTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.GiftCardTransactionType[] | Prisma.ListEnumGiftCardTransactionTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GiftCardTransactionType[] | Prisma.ListEnumGiftCardTransactionTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGiftCardTransactionTypeWithAggregatesFilter<$PrismaModel> | $Enums.GiftCardTransactionType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumGiftCardTransactionTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumGiftCardTransactionTypeFilter<$PrismaModel>
+}
+
 export type EnumAnnouncementStatusFilter<$PrismaModel = never> = {
   equals?: $Enums.AnnouncementStatus | Prisma.EnumAnnouncementStatusFieldRefInput<$PrismaModel>
   in?: $Enums.AnnouncementStatus[] | Prisma.ListEnumAnnouncementStatusFieldRefInput<$PrismaModel>
@@ -663,6 +680,23 @@ export type NestedEnumPaymentStatusWithAggregatesFilter<$PrismaModel = never> = 
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumPaymentStatusFilter<$PrismaModel>
   _max?: Prisma.NestedEnumPaymentStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumGiftCardTransactionTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.GiftCardTransactionType | Prisma.EnumGiftCardTransactionTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.GiftCardTransactionType[] | Prisma.ListEnumGiftCardTransactionTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GiftCardTransactionType[] | Prisma.ListEnumGiftCardTransactionTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGiftCardTransactionTypeFilter<$PrismaModel> | $Enums.GiftCardTransactionType
+}
+
+export type NestedEnumGiftCardTransactionTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.GiftCardTransactionType | Prisma.EnumGiftCardTransactionTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.GiftCardTransactionType[] | Prisma.ListEnumGiftCardTransactionTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.GiftCardTransactionType[] | Prisma.ListEnumGiftCardTransactionTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumGiftCardTransactionTypeWithAggregatesFilter<$PrismaModel> | $Enums.GiftCardTransactionType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumGiftCardTransactionTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumGiftCardTransactionTypeFilter<$PrismaModel>
 }
 
 export type NestedEnumAnnouncementStatusFilter<$PrismaModel = never> = {

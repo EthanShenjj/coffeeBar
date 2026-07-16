@@ -212,6 +212,7 @@ export type UserWhereInput = {
   carts?: Prisma.CartListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   messageReads?: Prisma.MessageReceiptListRelationFilter
+  giftCardAccount?: Prisma.XOR<Prisma.GiftCardAccountNullableScalarRelationFilter, Prisma.GiftCardAccountWhereInput> | null
 }
 
 export type UserOrderByWithRelationInput = {
@@ -229,6 +230,7 @@ export type UserOrderByWithRelationInput = {
   carts?: Prisma.CartOrderByRelationAggregateInput
   orders?: Prisma.OrderOrderByRelationAggregateInput
   messageReads?: Prisma.MessageReceiptOrderByRelationAggregateInput
+  giftCardAccount?: Prisma.GiftCardAccountOrderByWithRelationInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -249,6 +251,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   carts?: Prisma.CartListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   messageReads?: Prisma.MessageReceiptListRelationFilter
+  giftCardAccount?: Prisma.XOR<Prisma.GiftCardAccountNullableScalarRelationFilter, Prisma.GiftCardAccountWhereInput> | null
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -294,6 +297,7 @@ export type UserCreateInput = {
   carts?: Prisma.CartCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -311,6 +315,7 @@ export type UserUncheckedCreateInput = {
   carts?: Prisma.CartUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -328,6 +333,7 @@ export type UserUpdateInput = {
   carts?: Prisma.CartUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -345,6 +351,7 @@ export type UserUncheckedUpdateInput = {
   carts?: Prisma.CartUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -508,6 +515,20 @@ export type UserUpdateOneRequiredWithoutOrdersNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutOrdersInput, Prisma.UserUpdateWithoutOrdersInput>, Prisma.UserUncheckedUpdateWithoutOrdersInput>
 }
 
+export type UserCreateNestedOneWithoutGiftCardAccountInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutGiftCardAccountInput, Prisma.UserUncheckedCreateWithoutGiftCardAccountInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutGiftCardAccountInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutGiftCardAccountNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutGiftCardAccountInput, Prisma.UserUncheckedCreateWithoutGiftCardAccountInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutGiftCardAccountInput
+  upsert?: Prisma.UserUpsertWithoutGiftCardAccountInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutGiftCardAccountInput, Prisma.UserUpdateWithoutGiftCardAccountInput>, Prisma.UserUncheckedUpdateWithoutGiftCardAccountInput>
+}
+
 export type UserCreateNestedOneWithoutMessageReadsInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutMessageReadsInput, Prisma.UserUncheckedCreateWithoutMessageReadsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutMessageReadsInput
@@ -536,6 +557,7 @@ export type UserCreateWithoutSessionsInput = {
   carts?: Prisma.CartCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -552,6 +574,7 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   carts?: Prisma.CartUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -584,6 +607,7 @@ export type UserUpdateWithoutSessionsInput = {
   carts?: Prisma.CartUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -600,6 +624,7 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   carts?: Prisma.CartUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAccountsInput = {
@@ -616,6 +641,7 @@ export type UserCreateWithoutAccountsInput = {
   carts?: Prisma.CartCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAccountsInput = {
@@ -632,6 +658,7 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   carts?: Prisma.CartUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAccountsInput = {
@@ -664,6 +691,7 @@ export type UserUpdateWithoutAccountsInput = {
   carts?: Prisma.CartUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -680,6 +708,7 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   carts?: Prisma.CartUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
 }
 
 export type UserCreateWithoutProfileInput = {
@@ -696,6 +725,7 @@ export type UserCreateWithoutProfileInput = {
   carts?: Prisma.CartCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutProfileInput = {
@@ -712,6 +742,7 @@ export type UserUncheckedCreateWithoutProfileInput = {
   carts?: Prisma.CartUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutProfileInput = {
@@ -744,6 +775,7 @@ export type UserUpdateWithoutProfileInput = {
   carts?: Prisma.CartUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutProfileInput = {
@@ -760,6 +792,7 @@ export type UserUncheckedUpdateWithoutProfileInput = {
   carts?: Prisma.CartUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
 }
 
 export type UserCreateWithoutCartsInput = {
@@ -776,6 +809,7 @@ export type UserCreateWithoutCartsInput = {
   profile?: Prisma.UserProfileCreateNestedOneWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutCartsInput = {
@@ -792,6 +826,7 @@ export type UserUncheckedCreateWithoutCartsInput = {
   profile?: Prisma.UserProfileUncheckedCreateNestedOneWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutCartsInput = {
@@ -824,6 +859,7 @@ export type UserUpdateWithoutCartsInput = {
   profile?: Prisma.UserProfileUpdateOneWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCartsInput = {
@@ -840,6 +876,7 @@ export type UserUncheckedUpdateWithoutCartsInput = {
   profile?: Prisma.UserProfileUncheckedUpdateOneWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
 }
 
 export type UserCreateWithoutOrdersInput = {
@@ -856,6 +893,7 @@ export type UserCreateWithoutOrdersInput = {
   profile?: Prisma.UserProfileCreateNestedOneWithoutUserInput
   carts?: Prisma.CartCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutOrdersInput = {
@@ -872,6 +910,7 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   profile?: Prisma.UserProfileUncheckedCreateNestedOneWithoutUserInput
   carts?: Prisma.CartUncheckedCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutOrdersInput = {
@@ -904,6 +943,7 @@ export type UserUpdateWithoutOrdersInput = {
   profile?: Prisma.UserProfileUpdateOneWithoutUserNestedInput
   carts?: Prisma.CartUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutOrdersInput = {
@@ -919,6 +959,91 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
   profile?: Prisma.UserProfileUncheckedUpdateOneWithoutUserNestedInput
   carts?: Prisma.CartUncheckedUpdateManyWithoutUserNestedInput
+  messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
+}
+
+export type UserCreateWithoutGiftCardAccountInput = {
+  id?: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  role?: $Enums.UserRole
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  profile?: Prisma.UserProfileCreateNestedOneWithoutUserInput
+  carts?: Prisma.CartCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutGiftCardAccountInput = {
+  id?: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  role?: $Enums.UserRole
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  profile?: Prisma.UserProfileUncheckedCreateNestedOneWithoutUserInput
+  carts?: Prisma.CartUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutGiftCardAccountInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutGiftCardAccountInput, Prisma.UserUncheckedCreateWithoutGiftCardAccountInput>
+}
+
+export type UserUpsertWithoutGiftCardAccountInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutGiftCardAccountInput, Prisma.UserUncheckedUpdateWithoutGiftCardAccountInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutGiftCardAccountInput, Prisma.UserUncheckedCreateWithoutGiftCardAccountInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutGiftCardAccountInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutGiftCardAccountInput, Prisma.UserUncheckedUpdateWithoutGiftCardAccountInput>
+}
+
+export type UserUpdateWithoutGiftCardAccountInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  profile?: Prisma.UserProfileUpdateOneWithoutUserNestedInput
+  carts?: Prisma.CartUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutGiftCardAccountInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  profile?: Prisma.UserProfileUncheckedUpdateOneWithoutUserNestedInput
+  carts?: Prisma.CartUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
 }
 
@@ -936,6 +1061,7 @@ export type UserCreateWithoutMessageReadsInput = {
   profile?: Prisma.UserProfileCreateNestedOneWithoutUserInput
   carts?: Prisma.CartCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutMessageReadsInput = {
@@ -952,6 +1078,7 @@ export type UserUncheckedCreateWithoutMessageReadsInput = {
   profile?: Prisma.UserProfileUncheckedCreateNestedOneWithoutUserInput
   carts?: Prisma.CartUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutMessageReadsInput = {
@@ -984,6 +1111,7 @@ export type UserUpdateWithoutMessageReadsInput = {
   profile?: Prisma.UserProfileUpdateOneWithoutUserNestedInput
   carts?: Prisma.CartUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMessageReadsInput = {
@@ -1000,6 +1128,7 @@ export type UserUncheckedUpdateWithoutMessageReadsInput = {
   profile?: Prisma.UserProfileUncheckedUpdateOneWithoutUserNestedInput
   carts?: Prisma.CartUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
 }
 
 
@@ -1084,6 +1213,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   carts?: boolean | Prisma.User$cartsArgs<ExtArgs>
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   messageReads?: boolean | Prisma.User$messageReadsArgs<ExtArgs>
+  giftCardAccount?: boolean | Prisma.User$giftCardAccountArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -1128,6 +1258,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   carts?: boolean | Prisma.User$cartsArgs<ExtArgs>
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   messageReads?: boolean | Prisma.User$messageReadsArgs<ExtArgs>
+  giftCardAccount?: boolean | Prisma.User$giftCardAccountArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1142,6 +1273,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     carts: Prisma.$CartPayload<ExtArgs>[]
     orders: Prisma.$OrderPayload<ExtArgs>[]
     messageReads: Prisma.$MessageReceiptPayload<ExtArgs>[]
+    giftCardAccount: Prisma.$GiftCardAccountPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1552,6 +1684,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   carts<T extends Prisma.User$cartsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$cartsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CartPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   orders<T extends Prisma.User$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   messageReads<T extends Prisma.User$messageReadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$messageReadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MessageReceiptPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  giftCardAccount<T extends Prisma.User$giftCardAccountArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$giftCardAccountArgs<ExtArgs>>): Prisma.Prisma__GiftCardAccountClient<runtime.Types.Result.GetResult<Prisma.$GiftCardAccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2118,6 +2251,25 @@ export type User$messageReadsArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.MessageReceiptScalarFieldEnum | Prisma.MessageReceiptScalarFieldEnum[]
+}
+
+/**
+ * User.giftCardAccount
+ */
+export type User$giftCardAccountArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the GiftCardAccount
+   */
+  select?: Prisma.GiftCardAccountSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the GiftCardAccount
+   */
+  omit?: Prisma.GiftCardAccountOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.GiftCardAccountInclude<ExtArgs> | null
+  where?: Prisma.GiftCardAccountWhereInput
 }
 
 /**

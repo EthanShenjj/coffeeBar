@@ -397,6 +397,8 @@ export const ModelName = {
   Order: 'Order',
   OrderItem: 'OrderItem',
   Payment: 'Payment',
+  GiftCardAccount: 'GiftCardAccount',
+  GiftCardTransaction: 'GiftCardTransaction',
   Announcement: 'Announcement',
   MessageReceipt: 'MessageReceipt'
 } as const
@@ -414,7 +416,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "session" | "account" | "verification" | "userProfile" | "product" | "productOptionGroup" | "productOption" | "cart" | "cartItem" | "order" | "orderItem" | "payment" | "announcement" | "messageReceipt"
+    modelProps: "user" | "session" | "account" | "verification" | "userProfile" | "product" | "productOptionGroup" | "productOption" | "cart" | "cartItem" | "order" | "orderItem" | "payment" | "giftCardAccount" | "giftCardTransaction" | "announcement" | "messageReceipt"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1380,6 +1382,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    GiftCardAccount: {
+      payload: Prisma.$GiftCardAccountPayload<ExtArgs>
+      fields: Prisma.GiftCardAccountFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.GiftCardAccountFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardAccountPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.GiftCardAccountFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardAccountPayload>
+        }
+        findFirst: {
+          args: Prisma.GiftCardAccountFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardAccountPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.GiftCardAccountFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardAccountPayload>
+        }
+        findMany: {
+          args: Prisma.GiftCardAccountFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardAccountPayload>[]
+        }
+        create: {
+          args: Prisma.GiftCardAccountCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardAccountPayload>
+        }
+        createMany: {
+          args: Prisma.GiftCardAccountCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.GiftCardAccountCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardAccountPayload>[]
+        }
+        delete: {
+          args: Prisma.GiftCardAccountDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardAccountPayload>
+        }
+        update: {
+          args: Prisma.GiftCardAccountUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardAccountPayload>
+        }
+        deleteMany: {
+          args: Prisma.GiftCardAccountDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.GiftCardAccountUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.GiftCardAccountUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardAccountPayload>[]
+        }
+        upsert: {
+          args: Prisma.GiftCardAccountUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardAccountPayload>
+        }
+        aggregate: {
+          args: Prisma.GiftCardAccountAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateGiftCardAccount>
+        }
+        groupBy: {
+          args: Prisma.GiftCardAccountGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GiftCardAccountGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.GiftCardAccountCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GiftCardAccountCountAggregateOutputType> | number
+        }
+      }
+    }
+    GiftCardTransaction: {
+      payload: Prisma.$GiftCardTransactionPayload<ExtArgs>
+      fields: Prisma.GiftCardTransactionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.GiftCardTransactionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardTransactionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.GiftCardTransactionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardTransactionPayload>
+        }
+        findFirst: {
+          args: Prisma.GiftCardTransactionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardTransactionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.GiftCardTransactionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardTransactionPayload>
+        }
+        findMany: {
+          args: Prisma.GiftCardTransactionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardTransactionPayload>[]
+        }
+        create: {
+          args: Prisma.GiftCardTransactionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardTransactionPayload>
+        }
+        createMany: {
+          args: Prisma.GiftCardTransactionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.GiftCardTransactionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardTransactionPayload>[]
+        }
+        delete: {
+          args: Prisma.GiftCardTransactionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardTransactionPayload>
+        }
+        update: {
+          args: Prisma.GiftCardTransactionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardTransactionPayload>
+        }
+        deleteMany: {
+          args: Prisma.GiftCardTransactionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.GiftCardTransactionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.GiftCardTransactionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardTransactionPayload>[]
+        }
+        upsert: {
+          args: Prisma.GiftCardTransactionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GiftCardTransactionPayload>
+        }
+        aggregate: {
+          args: Prisma.GiftCardTransactionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateGiftCardTransaction>
+        }
+        groupBy: {
+          args: Prisma.GiftCardTransactionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GiftCardTransactionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.GiftCardTransactionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GiftCardTransactionCountAggregateOutputType> | number
+        }
+      }
+    }
     Announcement: {
       payload: Prisma.$AnnouncementPayload<ExtArgs>
       fields: Prisma.AnnouncementFieldRefs
@@ -1748,12 +1898,38 @@ export const PaymentScalarFieldEnum = {
   id: 'id',
   orderId: 'orderId',
   amount: 'amount',
+  giftCardAmount: 'giftCardAmount',
+  externalAmount: 'externalAmount',
   status: 'status',
   providerRef: 'providerRef',
   paidAt: 'paidAt'
 } as const
 
 export type PaymentScalarFieldEnum = (typeof PaymentScalarFieldEnum)[keyof typeof PaymentScalarFieldEnum]
+
+
+export const GiftCardAccountScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  balance: 'balance',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type GiftCardAccountScalarFieldEnum = (typeof GiftCardAccountScalarFieldEnum)[keyof typeof GiftCardAccountScalarFieldEnum]
+
+
+export const GiftCardTransactionScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  type: 'type',
+  amount: 'amount',
+  reference: 'reference',
+  orderId: 'orderId',
+  createdAt: 'createdAt'
+} as const
+
+export type GiftCardTransactionScalarFieldEnum = (typeof GiftCardTransactionScalarFieldEnum)[keyof typeof GiftCardTransactionScalarFieldEnum]
 
 
 export const AnnouncementScalarFieldEnum = {
@@ -1961,6 +2137,20 @@ export type ListEnumPaymentStatusFieldRefInput<$PrismaModel> = FieldRefInputType
 
 
 /**
+ * Reference to a field of type 'GiftCardTransactionType'
+ */
+export type EnumGiftCardTransactionTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GiftCardTransactionType'>
+    
+
+
+/**
+ * Reference to a field of type 'GiftCardTransactionType[]'
+ */
+export type ListEnumGiftCardTransactionTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GiftCardTransactionType[]'>
+    
+
+
+/**
  * Reference to a field of type 'AnnouncementStatus'
  */
 export type EnumAnnouncementStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AnnouncementStatus'>
@@ -2110,6 +2300,8 @@ export type GlobalOmitConfig = {
   order?: Prisma.OrderOmit
   orderItem?: Prisma.OrderItemOmit
   payment?: Prisma.PaymentOmit
+  giftCardAccount?: Prisma.GiftCardAccountOmit
+  giftCardTransaction?: Prisma.GiftCardTransactionOmit
   announcement?: Prisma.AnnouncementOmit
   messageReceipt?: Prisma.MessageReceiptOmit
 }

@@ -50,6 +50,14 @@ export const PaymentStatus = {
 export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus]
 
 
+export const GiftCardTransactionType = {
+  RECHARGE: 'RECHARGE',
+  PURCHASE: 'PURCHASE'
+} as const
+
+export type GiftCardTransactionType = (typeof GiftCardTransactionType)[keyof typeof GiftCardTransactionType]
+
+
 export const AnnouncementStatus = {
   DRAFT: 'DRAFT',
   PUBLISHED: 'PUBLISHED',

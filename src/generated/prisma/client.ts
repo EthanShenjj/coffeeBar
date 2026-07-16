@@ -107,6 +107,16 @@ export type OrderItem = Prisma.OrderItemModel
  */
 export type Payment = Prisma.PaymentModel
 /**
+ * Model GiftCardAccount
+ * 
+ */
+export type GiftCardAccount = Prisma.GiftCardAccountModel
+/**
+ * Model GiftCardTransaction
+ * 
+ */
+export type GiftCardTransaction = Prisma.GiftCardTransactionModel
+/**
  * Model Announcement
  * 
  */

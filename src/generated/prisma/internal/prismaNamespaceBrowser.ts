@@ -64,6 +64,8 @@ export const ModelName = {
   Order: 'Order',
   OrderItem: 'OrderItem',
   Payment: 'Payment',
+  GiftCardAccount: 'GiftCardAccount',
+  GiftCardTransaction: 'GiftCardTransaction',
   Announcement: 'Announcement',
   MessageReceipt: 'MessageReceipt'
 } as const
@@ -265,12 +267,38 @@ export const PaymentScalarFieldEnum = {
   id: 'id',
   orderId: 'orderId',
   amount: 'amount',
+  giftCardAmount: 'giftCardAmount',
+  externalAmount: 'externalAmount',
   status: 'status',
   providerRef: 'providerRef',
   paidAt: 'paidAt'
 } as const
 
 export type PaymentScalarFieldEnum = (typeof PaymentScalarFieldEnum)[keyof typeof PaymentScalarFieldEnum]
+
+
+export const GiftCardAccountScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  balance: 'balance',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type GiftCardAccountScalarFieldEnum = (typeof GiftCardAccountScalarFieldEnum)[keyof typeof GiftCardAccountScalarFieldEnum]
+
+
+export const GiftCardTransactionScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  type: 'type',
+  amount: 'amount',
+  reference: 'reference',
+  orderId: 'orderId',
+  createdAt: 'createdAt'
+} as const
+
+export type GiftCardTransactionScalarFieldEnum = (typeof GiftCardTransactionScalarFieldEnum)[keyof typeof GiftCardTransactionScalarFieldEnum]
 
 
 export const AnnouncementScalarFieldEnum = {
