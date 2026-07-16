@@ -32,7 +32,7 @@ export default async function GiftCardPage() {
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{t(transaction.type === "RECHARGE" ? "购物卡充值" : "订单消费")}</p>
                     <p className="mt-1 truncate text-xs text-zinc-400">
-                      {transaction.order?.orderNumber ?? transaction.createdAt.toLocaleString(locale === "zh" ? "zh-CN" : "en-US", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      {transaction.order?.orderNumber ?? transaction.createdAt.toLocaleString(locale === "zh" ? "zh-CN" : "en-US", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Shanghai" })}
                     </p>
                   </div>
                   <span className={`shrink-0 font-mono font-semibold ${transaction.amount > 0 ? "text-emerald-600" : "text-zinc-900"}`}>

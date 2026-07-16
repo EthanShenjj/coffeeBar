@@ -25,16 +25,21 @@ export function GiftCardPanel({ balance, persistent }: { balance: number; persis
   async function confirmRecharge() {
     if (selected === null || token === null) return;
     setPending(true);
-    const result = await rechargeGiftCard({ amount: selected, token });
-    setPending(false);
-    if (!result.ok) {
-      toast.error(t(result.message));
-      return;
+    try {
+      const result = await rechargeGiftCard({ amount: selected, token });
+      if (!result.ok) {
+        toast.error(t(result.message));
+        return;
+      }
+      toast.success(t("充值成功"));
+      setSelected(null);
+      setToken(null);
+      router.refresh();
+    } catch {
+      toast.error(t("充值失败，请稍后重试"));
+    } finally {
+      setPending(false);
     }
-    toast.success(t("充值成功"));
-    setSelected(null);
-    setToken(null);
-    router.refresh();
   }
 
   return <>
@@ -57,13 +62,13 @@ export function GiftCardPanel({ balance, persistent }: { balance: number; persis
       </div>
     </section>
 
-    <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null); }}>
+    <Dialog open={selected !== null} onOpenChange={(open) => { if (!open && !pending) setSelected(null); }}>
       <DialogContent>
         <DialogTitle className="text-2xl font-semibold">{t("确认充值")}</DialogTitle>
         <DialogDescription className="mt-2 text-sm leading-6 text-zinc-500">{t("确认后金额将立即存入购物卡。")}</DialogDescription>
         <p className="my-7 text-center font-mono text-4xl font-semibold">{formatMoney(selected ?? 0)}</p>
         <div className="grid grid-cols-2 gap-2">
-          <Button type="button" variant="outline" onClick={() => setSelected(null)}>{t("再想想")}</Button>
+          <Button type="button" variant="outline" onClick={() => setSelected(null)} disabled={pending}>{t("再想想")}</Button>
           <Button type="button" onClick={confirmRecharge} disabled={pending || !persistent}>
             {pending ? t("处理中…") : t("确认充值")}
           </Button>
