@@ -91,7 +91,7 @@ function initializeThinkingDataClient(client: ThinkingDataClient) {
   try {
     client.init({
       appId: thinkingDataAppId,
-      serverUrl: window.location.origin,
+      serverUrl: thinkingDataServerUrl,
       autoTrack: false,
       batch: false,
       disableRConfig: true,
