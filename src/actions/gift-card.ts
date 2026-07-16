@@ -6,11 +6,11 @@ import { getDb, hasDatabase } from "@/lib/db";
 import { creditGiftCard } from "@/lib/gift-card-service";
 import { giftCardRechargeSchema } from "@/lib/validation";
 
-export type RechargeGiftCardResult =
+export type GiftCardRechargeResult =
   | { ok: true; balance: number }
   | { ok: false; message: string };
 
-export async function rechargeGiftCard(raw: unknown): Promise<RechargeGiftCardResult> {
+export async function rechargeGiftCard(raw: unknown): Promise<GiftCardRechargeResult> {
   const parsed = giftCardRechargeSchema.safeParse(raw);
   if (!parsed.success) {
     return {
@@ -19,7 +19,7 @@ export async function rechargeGiftCard(raw: unknown): Promise<RechargeGiftCardRe
     };
   }
   if (!hasDatabase()) {
-    return { ok: false, message: "购物卡充值需要数据库支持" };
+    return { ok: false, message: "购物卡充值需要配置数据库" };
   }
 
   try {

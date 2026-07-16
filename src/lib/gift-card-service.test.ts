@@ -40,12 +40,12 @@ describe("creditGiftCard", () => {
       data: { balance: { increment: 10_000 } },
     });
     expect(giftCardTransaction.createMany).toHaveBeenCalledWith({
-      data: {
+      data: [{
         accountId: "card-1",
         type: "RECHARGE",
         amount: 10_000,
         reference: "RECHARGE:token-1",
-      },
+      }],
       skipDuplicates: true,
     });
     expect(result).toEqual({ balance: 12_000, duplicate: false });

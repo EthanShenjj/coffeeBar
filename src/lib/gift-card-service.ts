@@ -47,12 +47,12 @@ export async function creditGiftCard(
     create: { userId: input.userId },
   });
   const inserted = await tx.giftCardTransaction.createMany({
-    data: {
+    data: [{
       accountId: account.id,
       type: "RECHARGE",
       amount: input.amount,
       reference: input.reference,
-    },
+    }],
     skipDuplicates: true,
   });
 
