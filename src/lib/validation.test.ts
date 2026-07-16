@@ -19,4 +19,13 @@ describe("gift card recharge validation", () => {
   it.each([0, 9_999, 15_000, 50_001])("rejects the unsupported amount %i", (amount) => {
     expect(giftCardRechargeSchema.safeParse({ token, amount }).success).toBe(false);
   });
+
+  it("uses the recharge amount message for fractional amounts", () => {
+    const result = giftCardRechargeSchema.safeParse({ token, amount: 10_000.5 });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe("请选择有效的充值金额");
+    }
+  });
 });
