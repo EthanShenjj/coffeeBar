@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Coffee } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Coffee } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/i18n-provider";
 import { trackAnalytics } from "@/lib/analytics";
@@ -34,6 +34,8 @@ export function CoffeeCalendar({ coffeeDays, today }: { coffeeDays: string[]; to
   const weekDays = locale === "zh" ? zhWeekDays : enWeekDays;
   const current = parseDateKey(today);
   const [visibleMonth, setVisibleMonth] = useState<Month>({ year: current.year, month: current.month });
+  const [yearMenuOpen, setYearMenuOpen] = useState(false);
+  const yearMenuRef = useRef<HTMLDivElement>(null);
   const years = Array.from({ length: Math.max(1, current.year - calendarStartYear + 1) }, (_, index) => calendarStartYear + index);
   const markedDays = useMemo(() => new Set(coffeeDays), [coffeeDays]);
   const leadingBlanks = (new Date(Date.UTC(visibleMonth.year, visibleMonth.month, 1)).getUTCDay() + 6) % 7;
@@ -43,12 +45,31 @@ export function CoffeeCalendar({ coffeeDays, today }: { coffeeDays: string[]; to
   const isCurrentMonth = visibleMonth.year === current.year && visibleMonth.month === current.month;
   const isFirstMonth = visibleMonth.year === calendarStartYear && visibleMonth.month === 0;
 
+  useEffect(() => {
+    if (!yearMenuOpen) return;
+
+    function closeOnOutsidePress(event: PointerEvent) {
+      if (!yearMenuRef.current?.contains(event.target as Node)) setYearMenuOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setYearMenuOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [yearMenuOpen]);
+
   function selectYear(year: number) {
     trackAnalytics("coffee_calendar_navigated", { navigation_type: "year", year });
     setVisibleMonth((month) => ({
       year,
       month: year === current.year ? Math.min(month.month, current.month) : month.month,
     }));
+    setYearMenuOpen(false);
   }
 
   return (
@@ -65,17 +86,49 @@ export function CoffeeCalendar({ coffeeDays, today }: { coffeeDays: string[]; to
             </div>
           </div>
         </div>
-        <label className="flex items-center gap-2 text-xs text-zinc-400">
-          <span className="sr-only">{t("选择年份")}</span>
-          <select
-            value={visibleMonth.year}
-            onChange={(event) => selectYear(Number(event.target.value))}
-            className="h-9 rounded-full border bg-white px-3 font-medium text-black"
+        <div ref={yearMenuRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setYearMenuOpen((open) => !open)}
+            className={cn(
+              "flex h-11 min-w-32 items-center gap-2 rounded-2xl border bg-white px-3.5 text-sm font-medium shadow-sm transition hover:border-zinc-400 hover:bg-zinc-50",
+              yearMenuOpen && "border-black bg-zinc-50",
+            )}
             aria-label={t("选择年份")}
+            aria-haspopup="listbox"
+            aria-expanded={yearMenuOpen}
+            aria-controls="coffee-calendar-year-options"
           >
-            {years.map((year) => <option key={year} value={year}>{locale === "zh" ? `${year}年` : year}</option>)}
-          </select>
-        </label>
+            <CalendarDays className="size-4 text-zinc-400" aria-hidden="true" />
+            <span className="flex-1 text-left font-mono">{locale === "zh" ? `${visibleMonth.year}年` : visibleMonth.year}</span>
+            <ChevronDown className={cn("size-4 text-zinc-400 transition-transform duration-200", yearMenuOpen && "rotate-180")} aria-hidden="true" />
+          </button>
+
+          {yearMenuOpen && <div
+            id="coffee-calendar-year-options"
+            role="listbox"
+            aria-label={t("选择年份")}
+            className="absolute right-0 top-full z-30 mt-2 w-40 overflow-hidden rounded-2xl border bg-white p-1.5 shadow-xl shadow-black/10"
+          >
+            {years.map((year) => {
+              const selected = year === visibleMonth.year;
+              return <button
+                key={year}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => selectYear(year)}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition",
+                  selected ? "bg-black font-medium text-white" : "hover:bg-zinc-100",
+                )}
+              >
+                <Check className={cn("size-4", selected ? "opacity-100" : "opacity-0")} aria-hidden="true" />
+                <span className="font-mono">{locale === "zh" ? `${year}年` : year}</span>
+              </button>;
+            })}
+          </div>}
+        </div>
       </div>
 
       <div className="mt-6 flex items-end justify-between gap-4">

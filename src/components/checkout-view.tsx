@@ -9,6 +9,7 @@ import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input, Textarea } from "@/components/ui/input";
+import { createPickupWindow, PickupTimePicker } from "@/components/pickup-time-picker";
 import { lineTotal, useCartStore } from "@/lib/cart-store";
 import { flushAnalytics, trackAnalytics } from "@/lib/analytics";
 import { calculatePaymentSplit } from "@/lib/gift-card";
@@ -70,27 +71,6 @@ function readDirectCheckoutLine(kind: CartKind) {
 
 function checkoutIntentStorageKey(kind: CartKind, direct: boolean) {
   return `coffeebar-checkout-intent:${kind}:${direct ? "direct" : "cart"}`;
-}
-
-function toDateTimeLocalValue(date: Date) {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  const hours = `${date.getHours()}`.padStart(2, "0");
-  const minutes = `${date.getMinutes()}`.padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
-function createPickupWindow() {
-  const min = new Date();
-  min.setSeconds(0, 0);
-  const defaultTime = new Date(min.getTime() + 15 * 60_000);
-  const max = new Date(min.getTime() + 3 * 24 * 60 * 60_000);
-  return {
-    min: toDateTimeLocalValue(min),
-    max: toDateTimeLocalValue(max),
-    defaultValue: toDateTimeLocalValue(defaultTime),
-  };
 }
 
 function pickupAtIsoValue(value: string) {
@@ -246,10 +226,10 @@ export function CheckoutView({ kind, direct, giftCardBalance, giftCardPersistent
             <label className="text-sm"><span className="mb-2 block text-zinc-500">{t("联系电话")}</span><Input value={form.pickupPhone} onChange={(event) => setForm({ ...form, pickupPhone: event.target.value })} inputMode="numeric" placeholder={t("可不填，填则需 11 位手机号")} /></label>
           </div>
           <div className="mt-5">
-            <label className="block text-sm">
+            <div className="text-sm">
               <span className="mb-2 flex items-center gap-2 text-zinc-500"><CalendarClock className="size-4" />{t("预计取货时间")}</span>
-              <Input type="datetime-local" value={form.pickupAt} min={pickupWindow.min} max={pickupWindow.max} step={60} onChange={(event) => setForm({ ...form, pickupAt: event.target.value })} required />
-            </label>
+              <PickupTimePicker value={form.pickupAt} min={pickupWindow.min} max={pickupWindow.max} onChange={(pickupAt) => setForm({ ...form, pickupAt })} />
+            </div>
             <p className="mt-2 text-xs text-zinc-400">{t("可选择未来 3 天内的取货时间")}</p>
           </div>
           <label className="mt-5 block text-sm"><span className="mb-2 block text-zinc-500">{t("订单备注")}</span><Textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder={t("如有特殊需求，请告诉我们")} maxLength={200} /></label>

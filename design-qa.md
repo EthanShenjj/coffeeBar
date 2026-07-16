@@ -31,3 +31,49 @@
 - P1: none
 - P2: none
 - P3: 390px 下右侧 Tab 通过横向滚动访问，首屏保留部分下一项作为可滚动提示，属于预期行为。
+
+---
+
+# Date and time picker design QA
+
+- Source visual truth path: `/var/folders/nx/ww_j5y216qz18dj4jlst6pdh0000gn/T/codex-clipboard-382be921-35aa-4616-9590-2502733c4077.png`
+- Implementation screenshot path: `/tmp/coffeebar-pickup-picker-desktop.png`
+- Mobile implementation screenshot path: `/tmp/coffeebar-pickup-picker-mobile.png`
+- Combined comparison path: `/tmp/coffeebar-pickup-comparison.png`
+- Desktop viewport: `900 × 900`
+- Mobile viewport: `390 × 844`
+- State: checkout page, pickup date and time picker expanded
+
+## Full-view comparison evidence
+
+The native browser picker used a platform-blue selection color, exposed long independent hour and minute columns, and overflowed the visual language of the checkout card. The implementation replaces it with a CoffeeBar-styled trigger and bounded panel using the existing black, white, zinc, rounded-corner, border, and shadow tokens.
+
+## Focused region comparison evidence
+
+The expanded control was checked at desktop and mobile widths. Date cards, the selected time, the scrollable time grid, the business-hours note, and the panel edge remained readable. The mobile panel had no horizontal overflow, and Playwright could scroll to and select the final `21:30` option.
+
+## Required fidelity surfaces
+
+- Fonts and typography: Uses the app's existing sans and mono stacks, with clear label, selected-value, date, and time hierarchy.
+- Spacing and layout rhythm: Trigger and panel align to the checkout field width; date and time controls use the existing radius and spacing scale.
+- Colors and visual tokens: Selected states use CoffeeBar black and white instead of native browser blue; secondary content uses the existing zinc palette.
+- Image quality and asset fidelity: No raster imagery is required for this control. Calendar, clock, check, and chevron icons use the project's installed icon library.
+- Copy and content: Chinese and English labels were verified, including the three-day limit, opening hours, and 30-minute interval.
+
+## Interaction and responsive checks
+
+- Desktop date selection and time selection passed.
+- Mobile final-slot selection passed with no horizontal overflow.
+- English locale labels and accessible dialog label passed.
+- Escape and outside-click dismissal are implemented.
+- Browser console errors: none.
+
+## Findings
+
+No actionable P0, P1, or P2 issues remain.
+
+## Comparison history
+
+This was a first-pass comparison with no P0, P1, or P2 fixes required after capture.
+
+final result: passed

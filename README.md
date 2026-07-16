@@ -39,7 +39,18 @@ npm run dev
 - `NEXT_PUBLIC_MIXPANEL_PROJECT_TOKEN`: Mixpanel 项目的 Project Token，用于前端行为事件上报
 - `NEXT_PUBLIC_THINKINGDATA_APP_ID`: ThinkingData 项目的 App ID，用于前端行为事件上报
 - `NEXT_PUBLIC_THINKINGDATA_SERVER_URL`: ThinkingData 数据接收地址，例如 `https://ta-preview.thinkingdata.cn`
+- `THINKINGDATA_WEBHOOK_SECRET`: ThinkingData AE Webhook 通道鉴权密钥；配置后接口会校验 `X-AE-OPS-Signature` / `X-TE-OPS-Signature` 的 HmacSHA1 签名
 - `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`: 首次种子管理员，仅通过安全环境变量提供
+
+## ThinkingData Webhook 通道
+
+- 通道 URL：`{NEXT_PUBLIC_APP_URL}/api/thinkingdata/webhook`
+- 请求方式：`POST`
+- Content-Type：`application/json`
+- 请求体：ThinkingData AE Webhook 通道下发的消息数组
+- 返回值：`{ "return_code": 0, "return_message": "success", "data": { "fail_list": [] } }`
+
+当前接口完成通道接入格式校验和成功回执；后续如果要把 Webhook 消息投递到 CoffeeBar 消息中心，可以在 `src/app/api/thinkingdata/webhook/route.ts` 的成功分支中接入持久化或发送逻辑。
 
 ## 校验
 
