@@ -94,7 +94,7 @@ function initializeThinkingDataClient(client: ThinkingDataClient) {
       serverUrl: thinkingDataServerUrl,
       autoTrack: false,
       batch: false,
-      send_method: "ajax",
+      send_method: "image",
       showLog: process.env.NODE_ENV !== "production",
     });
     thinkingDataClient = client;
