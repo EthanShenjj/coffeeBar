@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, History, Settings, Shield, Sparkles } from "lucide-react";
+import { ChevronRight, CreditCard, History, Settings, Shield, Sparkles } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
 import { CoffeeCalendar } from "@/components/coffee-calendar";
 import { SiteHeader } from "@/components/site-header";
@@ -60,6 +60,16 @@ export default async function ProfilePage() {
             </div>
           </div>
         </section>
+
+        <Link href="/profile/gift-card" className="mt-5 flex items-center gap-4 rounded-[1.5rem] border bg-white p-5 hover:bg-zinc-50">
+          <div className="flex size-11 items-center justify-center rounded-full bg-black text-white"><CreditCard className="size-4" /></div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-zinc-500">{t("购物卡余额")}</p>
+            <p className="mt-1 font-mono text-xl font-semibold">{formatMoney(data.giftCardBalance)}</p>
+          </div>
+          <span className="text-sm text-zinc-500">{t("充值")}</span>
+          <ChevronRight className="size-4 text-zinc-300" />
+        </Link>
 
         <section className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
           {[[t("累计消费"), formatMoney(data.totalPaid)], [t("本月消费"), formatMoney(data.monthPaid)], [t("历史订单"), t("{count} 单", { count: data.orderCount })], [t("平均客单"), formatMoney(data.average)]].map(([label, value]) => (

@@ -21,10 +21,13 @@ export async function getProfileDashboard() {
   if (!session || !hasDatabase()) {
     const totalPaid = 68_600;
     const today = toShanghaiDateKey(new Date());
-    return { user: { name: session?.user.name ?? "Coffee Lover", email: session?.user.email ?? "demo@coffeebar.local", role: "CUSTOMER" }, totalPaid, monthPaid: 12_800, orderCount: 18, average: 3811, level: getMemberLevel(totalPaid), months: [38, 62, 45, 79, 54, 88], coffeeDays: [], today };
+    return { user: { name: session?.user.name ?? "Coffee Lover", email: session?.user.email ?? "demo@coffeebar.local", role: "CUSTOMER" }, giftCardBalance: 0, totalPaid, monthPaid: 12_800, orderCount: 18, average: 3811, level: getMemberLevel(totalPaid), months: [38, 62, 45, 79, 54, 88], coffeeDays: [], today };
   }
   const db = getDb();
-  const orders = await db.order.findMany({ where: { userId: session.user.id }, orderBy: { createdAt: "desc" }, select: { totalAmount: true, paidAt: true, kind: true, items: { select: { category: true } } } });
+  const [orders, account] = await Promise.all([
+    db.order.findMany({ where: { userId: session.user.id }, orderBy: { createdAt: "desc" }, select: { totalAmount: true, paidAt: true, kind: true, items: { select: { category: true } } } }),
+    db.giftCardAccount.findUnique({ where: { userId: session.user.id }, select: { balance: true } }),
+  ]);
   const now = new Date();
   const totalPaid = orders.reduce((sum, order) => sum + order.totalAmount, 0);
   const monthPaid = orders.filter((order) => order.paidAt.getFullYear() === now.getFullYear() && order.paidAt.getMonth() === now.getMonth()).reduce((sum, order) => sum + order.totalAmount, 0);
@@ -33,7 +36,7 @@ export async function getProfileDashboard() {
   const coffeeDays = [...new Set(orders
     .filter((order) => order.kind === "MENU" && order.items.some((item) => !nonDrinkMenuCategories.has(item.category)))
     .map((order) => toShanghaiDateKey(order.paidAt)))].sort();
-  return { user: { name: session.user.name, email: session.user.email, role: (session.user as typeof session.user & { role?: string }).role ?? "CUSTOMER" }, totalPaid, monthPaid, orderCount: orders.length, average: orders.length ? Math.round(totalPaid / orders.length) : 0, level: getMemberLevel(totalPaid), months: buckets.map((value) => Math.round((value / peak) * 100)), coffeeDays, today: toShanghaiDateKey(now) };
+  return { user: { name: session.user.name, email: session.user.email, role: (session.user as typeof session.user & { role?: string }).role ?? "CUSTOMER" }, giftCardBalance: account?.balance ?? 0, totalPaid, monthPaid, orderCount: orders.length, average: orders.length ? Math.round(totalPaid / orders.length) : 0, level: getMemberLevel(totalPaid), months: buckets.map((value) => Math.round((value / peak) * 100)), coffeeDays, today: toShanghaiDateKey(now) };
 }
 
 export async function getAccountProfile() {
