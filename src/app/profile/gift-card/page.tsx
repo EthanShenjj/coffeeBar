@@ -22,7 +22,7 @@ export default async function GiftCardPage() {
       <main className="mx-auto max-w-2xl px-5 py-8">
         <GiftCardPanel balance={summary.balance} persistent={summary.persistent} />
         <section className="mt-5 rounded-[1.5rem] border bg-white p-6">
-          <h2 className="font-semibold">{t("购物卡记录")}</h2>
+          <h2 className="font-semibold">{t("余额明细")}</h2>
           {summary.transactions.length === 0 ? (
             <p className="mt-5 text-sm text-zinc-500">{t("还没有购物卡记录")}</p>
           ) : (

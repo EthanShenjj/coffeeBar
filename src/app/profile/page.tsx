@@ -67,7 +67,7 @@ export default async function ProfilePage() {
             <p className="text-xs text-zinc-500">{t("购物卡余额")}</p>
             <p className="mt-1 font-mono text-xl font-semibold">{formatMoney(data.giftCardBalance)}</p>
           </div>
-          <span className="text-sm text-zinc-500">{t("充值")}</span>
+          <span className="text-sm font-medium">{t("充值")}</span>
           <ChevronRight className="size-4 text-zinc-300" />
         </Link>
 

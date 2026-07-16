@@ -38,11 +38,11 @@ export function GiftCardPanel({ balance, persistent }: { balance: number; persis
   }
 
   return <>
-    <section className="overflow-hidden rounded-[2rem] bg-black p-6 text-white md:p-8">
-      <p className="text-xs uppercase tracking-[.2em] text-white/45">CoffeeBar gift card</p>
-      <p className="mt-8 text-sm text-white/55">{t("购物卡余额")}</p>
-      <p className="mt-2 font-mono text-4xl font-semibold tracking-tight">{formatMoney(balance)}</p>
-      {!persistent && <p className="mt-6 text-xs text-white/45">{t("配置数据库后可使用购物卡")}</p>}
+    <section className="overflow-hidden rounded-[2rem] bg-black p-7 text-white md:p-9">
+      <p className="text-xs uppercase tracking-[.22em] text-white/45">CoffeeBar gift card</p>
+      <p className="mt-6 text-sm text-white/55">{t("购物卡余额")}</p>
+      <p className="mt-2 font-mono text-4xl font-semibold">{formatMoney(balance)}</p>
+      {!persistent && <p className="mt-4 text-xs text-amber-200">{t("配置数据库后可使用购物卡")}</p>}
     </section>
 
     <section className="mt-5 rounded-[1.5rem] border bg-white p-6">
@@ -50,20 +50,18 @@ export function GiftCardPanel({ balance, persistent }: { balance: number; persis
       <p className="mt-1 text-xs text-zinc-500">{t("模拟充值，不会产生真实扣款")}</p>
       <div className="mt-5 grid grid-cols-2 gap-3">
         {GIFT_CARD_RECHARGE_AMOUNTS.map((amount) => (
-          <Button key={amount} type="button" variant="outline" className="font-mono" onClick={() => choose(amount)}>
+          <button key={amount} type="button" className="min-h-20 rounded-2xl border bg-white font-mono text-xl font-semibold hover:border-black" onClick={() => choose(amount)}>
             {formatMoney(amount)}
-          </Button>
+          </button>
         ))}
       </div>
     </section>
 
     <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null); }}>
       <DialogContent>
-        <DialogTitle className="text-2xl font-semibold tracking-tight">{t("确认充值")}</DialogTitle>
+        <DialogTitle className="text-2xl font-semibold">{t("确认充值")}</DialogTitle>
         <DialogDescription className="mt-2 text-sm leading-6 text-zinc-500">{t("确认后金额将立即存入购物卡。")}</DialogDescription>
-        <div className="my-7 rounded-2xl bg-zinc-100 p-5 text-center">
-          <p className="font-mono text-4xl font-semibold">{selected === null ? formatMoney(0) : formatMoney(selected)}</p>
-        </div>
+        <p className="my-7 text-center font-mono text-4xl font-semibold">{formatMoney(selected ?? 0)}</p>
         <div className="grid grid-cols-2 gap-2">
           <Button type="button" variant="outline" onClick={() => setSelected(null)}>{t("再想想")}</Button>
           <Button type="button" onClick={confirmRecharge} disabled={pending || !persistent}>
