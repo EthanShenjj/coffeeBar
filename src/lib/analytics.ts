@@ -9,9 +9,17 @@ export type AnalyticsProperties = Record<string, AnalyticsValue>;
 
 const amplitudeApiKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY;
 const mixpanelProjectToken = process.env.NEXT_PUBLIC_MIXPANEL_PROJECT_TOKEN;
-const enabled = Boolean(amplitudeApiKey || mixpanelProjectToken);
+const thinkingDataAppId = process.env.NEXT_PUBLIC_THINKINGDATA_APP_ID;
+const thinkingDataServerUrl = process.env.NEXT_PUBLIC_THINKINGDATA_SERVER_URL;
+const thinkingDataEnabled = Boolean(thinkingDataAppId && thinkingDataServerUrl);
+const enabled = Boolean(amplitudeApiKey || mixpanelProjectToken || thinkingDataEnabled);
 
 let initialized = false;
+type ThinkingDataClient = typeof import("thinkingdata-browser").default;
+let thinkingDataClient: ThinkingDataClient | null = null;
+let thinkingDataLoading: Promise<ThinkingDataClient | null> | null = null;
+let pendingThinkingDataEvents: Array<{ eventName: string; payload: AnalyticsProperties }> = [];
+let pendingThinkingDataIdentity: { userId: string; properties: AnalyticsProperties } | null = null;
 
 function cleanProperties(properties: AnalyticsProperties = {}) {
   return Object.fromEntries(
@@ -25,6 +33,47 @@ function baseProperties() {
     event_version: 1,
     environment: process.env.NODE_ENV,
   });
+}
+
+function initThinkingData() {
+  if (!thinkingDataEnabled || thinkingDataClient || thinkingDataLoading) return;
+
+  thinkingDataLoading = import("thinkingdata-browser")
+    .then((module) => {
+      const client = module.default;
+      client.init({
+        appId: thinkingDataAppId,
+        serverUrl: thinkingDataServerUrl,
+        autoTrack: false,
+        batch: true,
+        send_method: "ajax",
+        showLog: process.env.NODE_ENV !== "production",
+      });
+      thinkingDataClient = client;
+
+      if (pendingThinkingDataIdentity) {
+        client.login(pendingThinkingDataIdentity.userId);
+        if (Object.keys(pendingThinkingDataIdentity.properties).length) {
+          client.userSet(pendingThinkingDataIdentity.properties);
+        }
+        pendingThinkingDataIdentity = null;
+      }
+      pendingThinkingDataEvents.forEach((event) => client.track(event.eventName, event.payload));
+      pendingThinkingDataEvents = [];
+
+      return client;
+    })
+    .catch(() => null);
+}
+
+function trackThinkingData(eventName: string, payload: AnalyticsProperties) {
+  if (!thinkingDataEnabled) return;
+  initThinkingData();
+  if (thinkingDataClient) {
+    thinkingDataClient.track(eventName, payload);
+    return;
+  }
+  pendingThinkingDataEvents.push({ eventName, payload });
 }
 
 export function initAnalytics() {
@@ -47,6 +96,8 @@ export function initAnalytics() {
     });
   }
 
+  initThinkingData();
+
   initialized = true;
 }
 
@@ -61,6 +112,7 @@ export function trackAnalytics(eventName: string, properties: AnalyticsPropertie
 
   if (amplitudeApiKey) amplitude.track(eventName, payload);
   if (mixpanelProjectToken) mixpanel.track(eventName, payload);
+  trackThinkingData(eventName, payload);
 }
 
 export function identifyAnalytics(userId?: string | null, properties: AnalyticsProperties = {}) {
@@ -75,6 +127,15 @@ export function identifyAnalytics(userId?: string | null, properties: AnalyticsP
     mixpanel.identify(userId);
     if (Object.keys(payload).length) mixpanel.people.set(payload);
   }
+  if (thinkingDataEnabled) {
+    initThinkingData();
+    if (thinkingDataClient) {
+      thinkingDataClient.login(userId);
+      if (Object.keys(payload).length) thinkingDataClient.userSet(payload);
+    } else {
+      pendingThinkingDataIdentity = { userId, properties: payload };
+    }
+  }
 }
 
 export async function flushAnalytics(timeoutMs = 800) {
@@ -82,6 +143,11 @@ export async function flushAnalytics(timeoutMs = 800) {
   const timeout = new Promise<void>((resolve) => window.setTimeout(resolve, timeoutMs));
   const tasks: Promise<unknown>[] = [];
   if (amplitudeApiKey) tasks.push(amplitude.flush().promise.catch(() => undefined));
+  if (thinkingDataEnabled) {
+    initThinkingData();
+    if (thinkingDataLoading) tasks.push(thinkingDataLoading.then((client) => client?.flush()).catch(() => undefined));
+    if (thinkingDataClient) thinkingDataClient.flush();
+  }
   await Promise.race([Promise.all(tasks), timeout]);
 }
 

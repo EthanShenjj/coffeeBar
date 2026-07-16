@@ -37,6 +37,8 @@ npm run dev
 - `BLOB_READ_WRITE_TOKEN`: 商品图片上传
 - `NEXT_PUBLIC_AMPLITUDE_API_KEY`: Amplitude 项目的 API Key，用于前端行为事件上报
 - `NEXT_PUBLIC_MIXPANEL_PROJECT_TOKEN`: Mixpanel 项目的 Project Token，用于前端行为事件上报
+- `NEXT_PUBLIC_THINKINGDATA_APP_ID`: ThinkingData 项目的 App ID，用于前端行为事件上报
+- `NEXT_PUBLIC_THINKINGDATA_SERVER_URL`: ThinkingData 数据接收地址，例如 `https://ta-preview.thinkingdata.cn`
 - `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`: 首次种子管理员，仅通过安全环境变量提供
 
 ## 校验

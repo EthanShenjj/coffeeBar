@@ -41,6 +41,7 @@
     "resend": "6.17.2",
     "sonner": "2.0.7",
     "tailwind-merge": "3.6.0",
+    "thinkingdata-browser": "^2.5.0",
     "zod": "4.4.3",
     "zustand": "5.0.14"
   },
