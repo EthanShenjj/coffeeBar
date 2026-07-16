@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Clock3, MapPin, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -13,6 +13,62 @@ import { lineTotal, useCartStore } from "@/lib/cart-store";
 import { calculatePaymentSplit } from "@/lib/gift-card";
 import { formatMoney } from "@/lib/utils";
 import type { CartKind, CartLine } from "@/lib/types";
+
+const DIRECT_CHECKOUT_STORAGE_KEY = "coffeebar-direct";
+const LAST_ORDER_STORAGE_KEY = "coffeebar-last-order";
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isCartLine(value: unknown, kind: CartKind): value is CartLine {
+  if (!isRecord(value) || typeof value.lineId !== "string" || !Number.isSafeInteger(value.quantity) || (value.quantity as number) < 1) return false;
+  if (!Array.isArray(value.optionIds) || !value.optionIds.every((optionId) => typeof optionId === "string")) return false;
+  if (!isRecord(value.product)) return false;
+
+  const product = value.product;
+  if (typeof product.id !== "string" || typeof product.slug !== "string" || typeof product.name !== "string" || typeof product.subtitle !== "string" || typeof product.description !== "string") return false;
+  if (product.channel !== kind || typeof product.category !== "string" || !Number.isSafeInteger(product.price) || (product.price as number) < 0 || typeof product.imageUrl !== "string" || typeof product.isAvailable !== "boolean") return false;
+  if (product.stock !== null && (!Number.isSafeInteger(product.stock) || (product.stock as number) < 0)) return false;
+  if (!Array.isArray(product.optionGroups)) return false;
+
+  return product.optionGroups.every((group) => {
+    if (!isRecord(group) || typeof group.id !== "string" || typeof group.name !== "string" || typeof group.required !== "boolean" || !Number.isSafeInteger(group.maxSelect)) return false;
+    if (!Array.isArray(group.options)) return false;
+    return group.options.every((option) => isRecord(option)
+      && typeof option.id === "string"
+      && typeof option.name === "string"
+      && Number.isSafeInteger(option.priceDelta)
+      && (option.isDefault === undefined || typeof option.isDefault === "boolean"));
+  });
+}
+
+function removeSessionStorageItem(key: string) {
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+    // Storage cleanup is best-effort (for example, in privacy-restricted browsers).
+  }
+}
+
+function readDirectCheckoutLine(kind: CartKind) {
+  if (typeof window === "undefined") return null;
+  try {
+    const storedValue = window.sessionStorage.getItem(DIRECT_CHECKOUT_STORAGE_KEY);
+    if (storedValue === null) return null;
+    const parsed: unknown = JSON.parse(storedValue);
+    if (isCartLine(parsed, kind)) return parsed;
+  } catch {
+    // Invalid or inaccessible storage is handled like a missing direct checkout.
+  }
+  removeSessionStorageItem(DIRECT_CHECKOUT_STORAGE_KEY);
+  return null;
+}
+
+function checkoutIntentStorageKey(kind: CartKind, direct: boolean) {
+  return `coffeebar-checkout-intent:${kind}:${direct ? "direct" : "cart"}`;
+}
 
 function createPickupTimes() {
   const base = new Date();
@@ -28,11 +84,9 @@ export function CheckoutView({ kind, direct, giftCardBalance, giftCardPersistent
   const { t } = useI18n();
   const cartLines = useCartStore((state) => kind === "MENU" ? state.menu : state.shop);
   const clear = useCartStore((state) => state.clear);
-  const [directLine] = useState<CartLine | null>(() => {
-    if (!direct || typeof window === "undefined") return null;
-    const value = window.sessionStorage.getItem("coffeebar-direct");
-    return value ? JSON.parse(value) as CartLine : null;
-  });
+  const [directLine] = useState<CartLine | null>(() => direct ? readDirectCheckoutLine(kind) : null);
+  const checkoutTokenRef = useRef<string | null>(null);
+  const intentStorageKey = checkoutIntentStorageKey(kind, direct);
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [useGiftCard, setUseGiftCard] = useState(false);
@@ -52,24 +106,61 @@ export function CheckoutView({ kind, direct, giftCardBalance, giftCardPersistent
 
   async function pay() {
     setPending(true);
-    const result = await confirmCheckout({ token: crypto.randomUUID(), kind, ...form, useGiftCard, items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity, optionIds: line.optionIds })) });
-    setPending(false);
-    if (!result.ok) {
-      toast.error(t(result.message));
-      if (result.message.includes("登录") || result.message.toLowerCase().includes("sign in")) router.push(`/login?next=${encodeURIComponent(location.pathname + location.search)}`);
-      return;
+    try {
+      let token = checkoutTokenRef.current;
+      if (!token) {
+        try {
+          const storedToken = window.sessionStorage.getItem(intentStorageKey);
+          if (storedToken && UUID_PATTERN.test(storedToken)) token = storedToken;
+        } catch {
+          // The in-memory token still keeps retries stable when storage is unavailable.
+        }
+        token ??= crypto.randomUUID();
+        checkoutTokenRef.current = token;
+        try {
+          window.sessionStorage.setItem(intentStorageKey, token);
+        } catch {
+          // Persistence across reloads is best-effort; the ref covers this page lifetime.
+        }
+      }
+
+      const result = await confirmCheckout({ token, kind, ...form, useGiftCard, items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity, optionIds: line.optionIds })) });
+      if (!result.ok) {
+        toast.error(t(result.message));
+        if (result.message.includes("登录") || result.message.toLowerCase().includes("sign in")) router.push(`/login?next=${encodeURIComponent(location.pathname + location.search)}`);
+        return;
+      }
+
+      const successParams = new URLSearchParams({
+        order: result.orderNumber,
+        amount: String(result.totalAmount),
+        giftCard: String(result.giftCardAmount),
+        external: String(result.externalAmount),
+        demo: result.demo ? "1" : "0",
+      });
+      const successUrl = `/payment/success?${successParams.toString()}`;
+
+      checkoutTokenRef.current = null;
+      removeSessionStorageItem(intentStorageKey);
+      if (!direct) {
+        try {
+          clear(kind);
+        } catch {
+          // A completed checkout must still navigate if persisted cart cleanup fails.
+        }
+      }
+      removeSessionStorageItem(DIRECT_CHECKOUT_STORAGE_KEY);
+      try {
+        window.sessionStorage.setItem(LAST_ORDER_STORAGE_KEY, JSON.stringify(result));
+      } catch {
+        // Preserve navigation even when the optional order snapshot cannot be stored.
+      }
+      router.push(successUrl);
+    } catch {
+      toast.error(t("支付未完成，请稍后重试"));
+    } finally {
+      setPending(false);
     }
-    if (!direct) clear(kind);
-    sessionStorage.removeItem("coffeebar-direct");
-    sessionStorage.setItem("coffeebar-last-order", JSON.stringify(result));
-    const successParams = new URLSearchParams({
-      order: result.orderNumber,
-      amount: String(result.totalAmount),
-      giftCard: String(result.giftCardAmount),
-      external: String(result.externalAmount),
-      demo: result.demo ? "1" : "0",
-    });
-    router.push(`/payment/success?${successParams.toString()}`);
   }
 
   return <>
@@ -109,13 +200,13 @@ export function CheckoutView({ kind, direct, giftCardBalance, giftCardPersistent
         <Button type="submit" size="lg" className="mt-6 w-full" disabled={!lines.length}>{t("确认支付")}</Button>
       </aside>
     </form>
-    <Dialog open={confirming} onOpenChange={setConfirming}>
-      <DialogContent>
+    <Dialog open={confirming} onOpenChange={(open) => { if (!pending || open) setConfirming(open); }}>
+      <DialogContent onEscapeKeyDown={(event) => { if (pending) event.preventDefault(); }} onPointerDownOutside={(event) => { if (pending) event.preventDefault(); }}>
         <DialogTitle className="text-2xl font-semibold tracking-tight">{t("确认模拟支付")}</DialogTitle>
         <DialogDescription className="mt-2 text-sm leading-6 text-zinc-500">{t("确认后将立即生成已支付订单，并保存本次实付金额。")}</DialogDescription>
         <div className="my-7 rounded-2xl bg-zinc-100 p-5 text-center"><p className="text-xs text-zinc-500">{t("本次支付")}</p><p className="mt-2 font-mono text-4xl font-semibold">{formatMoney(total)}</p></div>
         {useGiftCard && <div className="mb-7 space-y-2 rounded-2xl border border-zinc-200 p-4 text-sm"><p className="flex items-center justify-between text-zinc-500"><span>{t("购物卡支付")}</span><span className="font-mono">{formatMoney(split.giftCardAmount)}</span></p><p className="flex items-center justify-between text-zinc-500"><span>{t("模拟付费")}</span><span className="font-mono">{formatMoney(split.externalAmount)}</span></p></div>}
-        <div className="grid grid-cols-2 gap-2"><Button variant="outline" onClick={() => setConfirming(false)}>{t("再想想")}</Button><Button onClick={pay} disabled={pending}>{pending ? t("处理中…") : t("确认支付")}</Button></div>
+        <div className="grid grid-cols-2 gap-2"><Button variant="outline" onClick={() => setConfirming(false)} disabled={pending}>{t("再想想")}</Button><Button onClick={pay} disabled={pending}>{pending ? t("处理中…") : t("确认支付")}</Button></div>
       </DialogContent>
     </Dialog>
   </>;
