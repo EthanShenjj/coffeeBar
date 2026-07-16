@@ -80,7 +80,7 @@ const winningOrder = {
   },
 };
 
-describe("confirmCheckout transaction retries", () => {
+describe("confirmCheckout", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.hasDatabase.mockReturnValue(true);
@@ -121,5 +121,13 @@ describe("confirmCheckout transaction retries", () => {
 
     expect(result).toEqual({ ok: false, message: "支付未完成，请稍后重试" });
     expect(JSON.stringify(result)).not.toContain("database-secret");
+  });
+
+  it("preserves the login prompt for signed-out customers", async () => {
+    mocks.requireUser.mockRejectedValueOnce(new Error("请先登录后再继续"));
+
+    const result = await confirmCheckout(checkoutInput);
+
+    expect(result).toEqual({ ok: false, message: "请先登录后再继续" });
   });
 });

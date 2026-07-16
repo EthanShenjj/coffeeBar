@@ -51,6 +51,7 @@ function resultFromExistingOrder(
 }
 
 const checkoutErrorMessages = new Set([
+  "请先登录后再继续",
   "购物卡余额已变化，请重试支付",
   "餐饮与商店商品不能混合结算",
   "商品规格已变化，请重新选择",
