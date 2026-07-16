@@ -68,4 +68,41 @@ describe("creditGiftCard", () => {
     expect(giftCardAccount.update).not.toHaveBeenCalled();
     expect(result).toEqual({ balance: 12_000, duplicate: true });
   });
+
+  it("returns the winning recharge when a concurrent insert claims the reference", async () => {
+    const { tx, giftCardAccount, giftCardTransaction } = createFakeTransaction();
+    giftCardTransaction.createMany.mockResolvedValueOnce({ count: 0 });
+    giftCardTransaction.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: "txn-existing",
+        type: "RECHARGE",
+        account: { userId: "user-1", balance: 12_000 },
+      });
+
+    const result = await creditGiftCard(tx, {
+      userId: "user-1",
+      amount: 10_000,
+      reference: "RECHARGE:token-1",
+    });
+
+    expect(giftCardAccount.update).not.toHaveBeenCalled();
+    expect(result).toEqual({ balance: 12_000, duplicate: true });
+  });
+
+  it("rejects a recharge reference owned by another user", async () => {
+    const { tx, giftCardAccount, giftCardTransaction } = createFakeTransaction();
+    giftCardTransaction.findUnique.mockResolvedValueOnce({
+      id: "txn-existing",
+      type: "RECHARGE",
+      account: { userId: "user-2", balance: 12_000 },
+    });
+
+    await expect(creditGiftCard(tx, {
+      userId: "user-1",
+      amount: 10_000,
+      reference: "RECHARGE:token-1",
+    })).rejects.toThrow("充值令牌不可用");
+    expect(giftCardAccount.update).not.toHaveBeenCalled();
+  });
 });

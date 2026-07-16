@@ -36,7 +36,9 @@ export async function rechargeGiftCard(raw: unknown): Promise<GiftCardRechargeRe
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "充值失败，请稍后重试",
+      message: error instanceof Error && error.message === "充值令牌不可用"
+        ? error.message
+        : "充值失败，请稍后重试",
     };
   }
 }
