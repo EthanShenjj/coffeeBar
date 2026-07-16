@@ -12,6 +12,7 @@ describe("auth form analytics", () => {
     expect(registrationBranch).toBeGreaterThan(-1);
     expect(registEvent).toBeGreaterThan(registrationBranch);
     expect(automaticLoginEvent).toBeGreaterThan(registEvent);
+    expect(source.indexOf("registrationDeviceProfileProperties()", registEvent)).toBeGreaterThan(registEvent);
   });
 
   it("reports email-password login separately from registration", () => {

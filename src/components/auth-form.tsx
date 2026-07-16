@@ -10,6 +10,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { useI18n } from "@/components/i18n-provider";
 import { authClient } from "@/lib/auth-client";
 import { identifyAnalytics, trackAnalytics } from "@/lib/analytics";
+import { registrationDeviceProfileProperties } from "@/lib/registration-device-profile";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const { t } = useI18n();
@@ -29,7 +30,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     identifyAnalytics(result.data?.user?.id, { auth_mode: mode });
     const authProperties = { auth_mode: mode, has_next: Boolean(params.get("next")) };
     if (mode === "signup") {
-      trackAnalytics("regist", { ...authProperties, regist_method: "email_password" });
+      trackAnalytics("regist", { ...authProperties, regist_method: "email_password", ...registrationDeviceProfileProperties() });
       trackAnalytics("login", { ...authProperties, login_method: "signup_auto_login" });
     } else {
       trackAnalytics("login", { ...authProperties, login_method: "email_password" });
