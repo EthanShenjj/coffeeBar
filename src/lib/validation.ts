@@ -16,8 +16,12 @@ export const checkoutSchema = z.object({
   token: z.string().uuid(),
   kind: z.enum(["MENU", "SHOP"]),
   pickupName: z.string().trim().min(2).max(40),
-  pickupPhone: z.string().regex(/^1\d{10}$/, "请输入 11 位手机号"),
-  pickupAt: z.string().datetime(),
+  pickupPhone: z.string().trim().refine((value) => value === "" || /^1\d{10}$/.test(value), "请输入 11 位手机号"),
+  pickupAt: z.string().datetime().refine((value) => {
+    const pickupAt = new Date(value).getTime();
+    const now = Date.now();
+    return Number.isFinite(pickupAt) && pickupAt >= now - 60_000 && pickupAt <= now + 3 * 24 * 60 * 60_000;
+  }, "请选择 3 天内的取货时间"),
   note: z.string().trim().max(200).optional(),
   useGiftCard: z.boolean().default(false),
   items: z.array(z.object({

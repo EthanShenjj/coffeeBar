@@ -30,7 +30,7 @@ const checkoutInput = {
   kind: "MENU",
   pickupName: "林墨",
   pickupPhone: "13800138000",
-  pickupAt: "2026-07-16T08:00:00.000Z",
+  pickupAt: new Date(Date.now() + 60 * 60_000).toISOString(),
   useGiftCard: true,
   items: [{ productId: "product-1", quantity: 1, optionIds: [] }],
 };

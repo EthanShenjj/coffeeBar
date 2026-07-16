@@ -4,8 +4,10 @@ import { checkoutSchema, giftCardRechargeSchema } from "@/lib/validation";
 const valid = { token: "a6236aeb-4e08-44f4-b9d4-c927219563af", kind: "MENU", pickupName: "林墨", pickupPhone: "13800138000", pickupAt: new Date(Date.now() + 3600000).toISOString(), items: [{ productId: "latte", quantity: 1, optionIds: [] }] };
 describe("checkout validation", () => {
   it("accepts a valid pickup order", () => { expect(checkoutSchema.safeParse(valid).success).toBe(true); });
+  it("accepts an empty pickup phone", () => { expect(checkoutSchema.safeParse({ ...valid, pickupPhone: "" }).success).toBe(true); });
   it("defaults gift card use to false", () => { expect(checkoutSchema.parse(valid).useGiftCard).toBe(false); });
   it("rejects invalid phone numbers", () => { expect(checkoutSchema.safeParse({ ...valid, pickupPhone: "123" }).success).toBe(false); });
+  it("rejects pickup times after 3 days", () => { expect(checkoutSchema.safeParse({ ...valid, pickupAt: new Date(Date.now() + 4 * 24 * 3600000).toISOString() }).success).toBe(false); });
   it("rejects empty carts", () => { expect(checkoutSchema.safeParse({ ...valid, items: [] }).success).toBe(false); });
 });
 

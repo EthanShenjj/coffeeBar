@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Clock3, MapPin, ShieldCheck } from "lucide-react";
+import { CalendarClock, MapPin, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { confirmCheckout } from "@/actions/checkout";
 import { useI18n } from "@/components/i18n-provider";
@@ -72,13 +72,30 @@ function checkoutIntentStorageKey(kind: CartKind, direct: boolean) {
   return `coffeebar-checkout-intent:${kind}:${direct ? "direct" : "cart"}`;
 }
 
-function createPickupTimes() {
-  const base = new Date();
-  return Array.from({ length: 8 }, (_, index) => {
-    const date = new Date(base.getTime() + (index + 1) * 30 * 60_000);
-    date.setSeconds(0, 0);
-    return { value: date.toISOString(), label: `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}` };
-  });
+function toDateTimeLocalValue(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  const hours = `${date.getHours()}`.padStart(2, "0");
+  const minutes = `${date.getMinutes()}`.padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function createPickupWindow() {
+  const min = new Date();
+  min.setSeconds(0, 0);
+  const defaultTime = new Date(min.getTime() + 15 * 60_000);
+  const max = new Date(min.getTime() + 3 * 24 * 60 * 60_000);
+  return {
+    min: toDateTimeLocalValue(min),
+    max: toDateTimeLocalValue(max),
+    defaultValue: toDateTimeLocalValue(defaultTime),
+  };
+}
+
+function pickupAtIsoValue(value: string) {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : "";
 }
 
 function checkoutFailureCode(message: string) {
@@ -101,12 +118,12 @@ export function CheckoutView({ kind, direct, giftCardBalance, giftCardPersistent
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [useGiftCard, setUseGiftCard] = useState(false);
-  const [form, setForm] = useState({ pickupName: "", pickupPhone: "", pickupAt: "", note: "" });
+  const [pickupWindow] = useState(createPickupWindow);
+  const [form, setForm] = useState(() => ({ pickupName: "", pickupPhone: "", pickupAt: pickupWindow.defaultValue, note: "" }));
   const checkoutTracked = useRef(false);
   const lines = useMemo(() => direct ? (directLine ? [directLine] : []) : cartLines, [cartLines, direct, directLine]);
   const total = useMemo(() => lines.reduce((sum, line) => sum + lineTotal(line), 0), [lines]);
   const split = useMemo(() => calculatePaymentSplit(total, giftCardBalance, useGiftCard), [giftCardBalance, total, useGiftCard]);
-  const [times] = useState(createPickupTimes);
   const checkoutProperties = useMemo(() => ({
     product_channel: kind,
     checkout_mode: direct ? "direct" : "cart",
@@ -124,9 +141,11 @@ export function CheckoutView({ kind, direct, giftCardBalance, giftCardPersistent
   function openConfirm(event: React.FormEvent) {
     event.preventDefault();
     if (!lines.length) return toast.error(t("没有可结算的商品"));
-    if (!/^1\d{10}$/.test(form.pickupPhone)) return toast.error(t("请输入 11 位手机号"));
+    if (form.pickupPhone.trim() && !/^1\d{10}$/.test(form.pickupPhone.trim())) return toast.error(t("请输入 11 位手机号"));
     if (!form.pickupAt) return toast.error(t("请选择取货时间"));
-    trackAnalytics("checkout_form_submitted", { ...checkoutProperties, has_note: Boolean(form.note.trim()), pickup_lead_time_minutes: Math.max(0, Math.round((new Date(form.pickupAt).getTime() - Date.now()) / 60_000)) });
+    const pickupAt = new Date(form.pickupAt);
+    if (!Number.isFinite(pickupAt.getTime()) || form.pickupAt < pickupWindow.min || form.pickupAt > pickupWindow.max) return toast.error(t("请选择 3 天内的取货时间"));
+    trackAnalytics("checkout_form_submitted", { ...checkoutProperties, has_note: Boolean(form.note.trim()), pickup_lead_time_minutes: Math.max(0, Math.round((pickupAt.getTime() - Date.now()) / 60_000)) });
     setConfirming(true);
   }
 
@@ -156,7 +175,15 @@ export function CheckoutView({ kind, direct, giftCardBalance, giftCardPersistent
         }
       }
 
-      const result = await confirmCheckout({ token, kind, ...form, useGiftCard, items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity, optionIds: line.optionIds })) });
+      const result = await confirmCheckout({
+        token,
+        kind,
+        ...form,
+        pickupPhone: form.pickupPhone.trim(),
+        pickupAt: pickupAtIsoValue(form.pickupAt),
+        useGiftCard,
+        items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity, optionIds: line.optionIds })),
+      });
       if (!result.ok) {
         trackAnalytics("order_payment_failed", { ...checkoutProperties, failure_code: checkoutFailureCode(result.message) });
         toast.error(t(result.message));
@@ -216,11 +243,14 @@ export function CheckoutView({ kind, direct, giftCardBalance, giftCardPersistent
           </div>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <label className="text-sm"><span className="mb-2 block text-zinc-500">{t("取货人")}</span><Input value={form.pickupName} onChange={(event) => setForm({ ...form, pickupName: event.target.value })} placeholder={t("你的姓名")} required /></label>
-            <label className="text-sm"><span className="mb-2 block text-zinc-500">{t("联系电话")}</span><Input value={form.pickupPhone} onChange={(event) => setForm({ ...form, pickupPhone: event.target.value })} inputMode="numeric" placeholder={t("11 位手机号")} required /></label>
+            <label className="text-sm"><span className="mb-2 block text-zinc-500">{t("联系电话")}</span><Input value={form.pickupPhone} onChange={(event) => setForm({ ...form, pickupPhone: event.target.value })} inputMode="numeric" placeholder={t("可不填，填则需 11 位手机号")} /></label>
           </div>
           <div className="mt-5">
-            <div className="mb-3 flex items-center gap-2 text-sm text-zinc-500"><Clock3 className="size-4" />{t("预计取货时间")}</div>
-            <div className="no-scrollbar flex gap-2 overflow-x-auto">{times.map((time) => <button type="button" key={time.value} onClick={() => setForm({ ...form, pickupAt: time.value })} className={`shrink-0 rounded-full border px-4 py-2 text-sm ${form.pickupAt === time.value ? "border-black bg-black text-white" : "bg-white"}`}>{time.label}</button>)}</div>
+            <label className="block text-sm">
+              <span className="mb-2 flex items-center gap-2 text-zinc-500"><CalendarClock className="size-4" />{t("预计取货时间")}</span>
+              <Input type="datetime-local" value={form.pickupAt} min={pickupWindow.min} max={pickupWindow.max} step={60} onChange={(event) => setForm({ ...form, pickupAt: event.target.value })} required />
+            </label>
+            <p className="mt-2 text-xs text-zinc-400">{t("可选择未来 3 天内的取货时间")}</p>
           </div>
           <label className="mt-5 block text-sm"><span className="mb-2 block text-zinc-500">{t("订单备注")}</span><Textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder={t("如有特殊需求，请告诉我们")} maxLength={200} /></label>
         </section>
