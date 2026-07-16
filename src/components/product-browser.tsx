@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useCartStore } from "@/lib/cart-store";
+import { productAnalyticsProperties, trackAnalytics } from "@/lib/analytics";
 import { cn, formatMoney } from "@/lib/utils";
 import type { ProductView } from "@/lib/types";
 
@@ -66,8 +67,12 @@ export function ProductArtwork({ product, variant }: { product: ProductView; var
 
 export function ProductBrowser({ products, channel }: { products: ProductView[]; channel: "MENU" | "SHOP" }) {
   const [selected, setSelected] = useState<ProductView | null>(null);
+  function selectProduct(product: ProductView) {
+    trackAnalytics("product_viewed", productAnalyticsProperties(product));
+    setSelected(product);
+  }
   return <>
-    {channel === "MENU" ? <MenuProductList products={products} onSelect={setSelected} /> : <ShopProductList products={products} onSelect={setSelected} />}
+    {channel === "MENU" ? <MenuProductList products={products} onSelect={selectProduct} /> : <ShopProductList products={products} onSelect={selectProduct} />}
     <ProductDialog product={selected} onClose={() => setSelected(null)} />
   </>;
 }
@@ -84,7 +89,7 @@ function MenuProductList({ products, onSelect }: { products: ProductView[]; onSe
     </div>
 
     <div className="sticky top-16 z-20 -mx-5 mt-5 border-y bg-background/95 px-5 py-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:px-0 md:py-0">
-      <div className="no-scrollbar flex gap-2 overflow-x-auto">{menuSections.map((item) => <button key={item.name} onClick={() => setSection(item.name)} className={cn("shrink-0 rounded-full border px-4 py-2.5 text-sm transition md:px-5", section === item.name ? "border-black bg-black text-white" : "bg-white text-zinc-500 hover:border-zinc-400")}>{t(item.name)}</button>)}</div>
+      <div className="no-scrollbar flex gap-2 overflow-x-auto">{menuSections.map((item) => <button key={item.name} onClick={() => { setSection(item.name); trackAnalytics("catalog_category_selected", { product_channel: "MENU", category_name: item.name }); }} className={cn("shrink-0 rounded-full border px-4 py-2.5 text-sm transition md:px-5", section === item.name ? "border-black bg-black text-white" : "bg-white text-zinc-500 hover:border-zinc-400")}>{t(item.name)}</button>)}</div>
     </div>
 
     <div className="mb-5 mt-7 flex items-end justify-between border-b pb-4">
@@ -113,7 +118,7 @@ function ShopProductList({ products, onSelect }: { products: ProductView[]; onSe
   const categories = ["咖啡杯", "咖啡器具"];
   const [category, setCategory] = useState(categories[0]);
   const filtered = products.filter((product) => product.category === category);
-  return <><div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-1 md:mx-0 md:px-0">{categories.map((item) => <button key={item} onClick={() => setCategory(item)} className={cn("shrink-0 rounded-full border px-5 py-2.5 text-sm transition", category === item ? "border-black bg-black text-white" : "bg-white text-zinc-500")}>{t(item)}</button>)}</div><div className="mt-7 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4">{filtered.map((product, index) => <button key={product.id} onClick={() => onSelect(product)} className="group overflow-hidden rounded-[1.5rem] border bg-white text-left transition hover:-translate-y-1 hover:shadow-xl hover:shadow-black/5"><div className="relative aspect-[4/4.5] overflow-hidden bg-zinc-100"><Image src={product.imageUrl} alt={t(product.name)} fill sizes="(max-width: 768px) 50vw, 25vw" preload={index === 0} className="object-cover grayscale-[20%] transition duration-500 group-hover:scale-105 group-hover:grayscale-0" />{product.stock !== null && product.stock < 10 && <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-medium">{t("仅余 {count}", { count: product.stock })}</span>}</div><div className="p-4"><h3 className="font-medium tracking-tight">{t(product.name)}</h3><p className="mt-1 line-clamp-1 text-xs text-zinc-500">{t(product.subtitle)}</p><p className="mt-3 font-mono text-sm font-medium">{formatMoney(product.price)}<span className="font-sans text-[10px] font-normal text-zinc-400"> {t("起")}</span></p></div></button>)}</div></>;
+  return <><div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-1 md:mx-0 md:px-0">{categories.map((item) => <button key={item} onClick={() => { setCategory(item); trackAnalytics("catalog_category_selected", { product_channel: "SHOP", category_name: item }); }} className={cn("shrink-0 rounded-full border px-5 py-2.5 text-sm transition", category === item ? "border-black bg-black text-white" : "bg-white text-zinc-500")}>{t(item)}</button>)}</div><div className="mt-7 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4">{filtered.map((product, index) => <button key={product.id} onClick={() => onSelect(product)} className="group overflow-hidden rounded-[1.5rem] border bg-white text-left transition hover:-translate-y-1 hover:shadow-xl hover:shadow-black/5"><div className="relative aspect-[4/4.5] overflow-hidden bg-zinc-100"><Image src={product.imageUrl} alt={t(product.name)} fill sizes="(max-width: 768px) 50vw, 25vw" preload={index === 0} className="object-cover grayscale-[20%] transition duration-500 group-hover:scale-105 group-hover:grayscale-0" />{product.stock !== null && product.stock < 10 && <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-medium">{t("仅余 {count}", { count: product.stock })}</span>}</div><div className="p-4"><h3 className="font-medium tracking-tight">{t(product.name)}</h3><p className="mt-1 line-clamp-1 text-xs text-zinc-500">{t(product.subtitle)}</p><p className="mt-3 font-mono text-sm font-medium">{formatMoney(product.price)}<span className="font-sans text-[10px] font-normal text-zinc-400"> {t("起")}</span></p></div></button>)}</div></>;
 }
 
 function ProductDialog({ product, onClose }: { product: ProductView | null; onClose: () => void }) {
@@ -129,10 +134,12 @@ function ProductDialog({ product, onClose }: { product: ProductView | null; onCl
   function toggle(groupId: string, optionId: string, maxSelect: number) {
     if (!product) return;
     const group = product.optionGroups.find((entry) => entry.id === groupId)!;
+    const option = group.options.find((entry) => entry.id === optionId);
     const ids = new Set(group.options.map((entry) => entry.id));
     const base = effective.filter((id) => !ids.has(id));
     const current = effective.filter((id) => ids.has(id));
     setSelectedOptions(maxSelect === 1 ? [...base, optionId] : current.includes(optionId) ? [...base, ...current.filter((id) => id !== optionId)] : [...base, ...current.slice(-(maxSelect - 1)), optionId]);
+    trackAnalytics("product_option_selected", { ...productAnalyticsProperties(product), option_group_id: groupId, option_id: optionId, option_price_delta_cents: option?.priceDelta ?? 0 });
   }
   function valid() {
     if (!product) return false;
@@ -140,8 +147,14 @@ function ProductDialog({ product, onClose }: { product: ProductView | null; onCl
     if (missing) toast.error(t("请选择{name}", { name: t(missing.name) }));
     return !missing;
   }
-  function addToCart() { if (!product || !valid()) return; add(product, effective, quantity); toast.success(t("已加入购物车")); onClose(); }
-  function buyNow() { if (!product || !valid()) return; sessionStorage.setItem("coffeebar-direct", JSON.stringify({ lineId: `direct:${product.id}`, product, optionIds: effective, quantity })); onClose(); router.push(`/checkout?kind=${product.channel}&direct=1`); }
+  function changeQuantity(nextQuantity: number) {
+    if (!product) return;
+    const bounded = Math.max(1, Math.min(20, nextQuantity));
+    setQuantity(bounded);
+    trackAnalytics("product_quantity_changed", { ...productAnalyticsProperties(product), quantity: bounded });
+  }
+  function addToCart() { if (!product || !valid()) return; add(product, effective, quantity); trackAnalytics("add_to_cart", { ...productAnalyticsProperties(product), quantity, option_count: effective.length, item_amount_cents: (product.price + delta) * quantity }); toast.success(t("已加入购物车")); onClose(); }
+  function buyNow() { if (!product || !valid()) return; sessionStorage.setItem("coffeebar-direct", JSON.stringify({ lineId: `direct:${product.id}`, product, optionIds: effective, quantity })); trackAnalytics("buy_now_clicked", { ...productAnalyticsProperties(product), quantity, option_count: effective.length, item_amount_cents: (product.price + delta) * quantity }); onClose(); router.push(`/checkout?kind=${product.channel}&direct=1`); }
 
-  return <Dialog open={Boolean(product)} onOpenChange={(open) => { if (!open) { setSelectedOptions([]); setQuantity(1); onClose(); } }}><DialogContent className="p-0">{product && <><div className="relative aspect-[16/9] overflow-hidden rounded-t-[2rem] bg-zinc-100"><ProductArtwork product={product} variant="dialog" /></div><div className="p-6 pt-5"><DialogTitle className="text-2xl font-semibold tracking-[-0.04em]">{t(product.name)}</DialogTitle><DialogDescription className="mt-2 text-sm leading-6 text-zinc-500">{t(product.description)}</DialogDescription><div className="mt-5 max-h-[36vh] space-y-5 overflow-y-auto pr-1">{product.optionGroups.map((group) => <div key={group.id}><div className="mb-2 flex justify-between"><p className="text-sm font-medium">{t(group.name)}</p>{group.required && <span className="text-[10px] text-zinc-400">{t("必选")}</span>}</div><div className="flex flex-wrap gap-2">{group.options.map((option) => { const optionActive = effective.includes(option.id); return <button key={option.id} onClick={() => toggle(group.id, option.id, group.maxSelect)} className={cn("rounded-full border px-4 py-2 text-xs", optionActive ? "border-black bg-black text-white" : "bg-white")}>{t(option.name)}{option.priceDelta > 0 ? ` +${formatMoney(option.priceDelta)}` : ""}</button>; })}</div></div>)}</div><div className="mt-6 flex items-center justify-between border-t pt-5"><span className="text-sm text-zinc-500">{t("数量")}</span><div className="flex items-center gap-4"><button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="flex size-9 items-center justify-center rounded-full bg-zinc-100"><Minus className="size-4" /></button><span className="w-4 text-center font-mono">{quantity}</span><button onClick={() => setQuantity(Math.min(20, quantity + 1))} className="flex size-9 items-center justify-center rounded-full bg-zinc-100"><Plus className="size-4" /></button></div></div><div className="mt-5 grid grid-cols-[1fr_1.25fr] gap-2"><Button variant="outline" onClick={addToCart}><ShoppingBag className="size-4" />{t("加入购物车")}</Button><Button onClick={buyNow}>{t("直接点单")} · {formatMoney((product.price + delta) * quantity)}</Button></div></div></>}</DialogContent></Dialog>;
+  return <Dialog open={Boolean(product)} onOpenChange={(open) => { if (!open) { setSelectedOptions([]); setQuantity(1); onClose(); } }}><DialogContent className="p-0">{product && <><div className="relative aspect-[16/9] overflow-hidden rounded-t-[2rem] bg-zinc-100"><ProductArtwork product={product} variant="dialog" /></div><div className="p-6 pt-5"><DialogTitle className="text-2xl font-semibold tracking-[-0.04em]">{t(product.name)}</DialogTitle><DialogDescription className="mt-2 text-sm leading-6 text-zinc-500">{t(product.description)}</DialogDescription><div className="mt-5 max-h-[36vh] space-y-5 overflow-y-auto pr-1">{product.optionGroups.map((group) => <div key={group.id}><div className="mb-2 flex justify-between"><p className="text-sm font-medium">{t(group.name)}</p>{group.required && <span className="text-[10px] text-zinc-400">{t("必选")}</span>}</div><div className="flex flex-wrap gap-2">{group.options.map((option) => { const optionActive = effective.includes(option.id); return <button key={option.id} onClick={() => toggle(group.id, option.id, group.maxSelect)} className={cn("rounded-full border px-4 py-2 text-xs", optionActive ? "border-black bg-black text-white" : "bg-white")}>{t(option.name)}{option.priceDelta > 0 ? ` +${formatMoney(option.priceDelta)}` : ""}</button>; })}</div></div>)}</div><div className="mt-6 flex items-center justify-between border-t pt-5"><span className="text-sm text-zinc-500">{t("数量")}</span><div className="flex items-center gap-4"><button onClick={() => changeQuantity(quantity - 1)} className="flex size-9 items-center justify-center rounded-full bg-zinc-100"><Minus className="size-4" /></button><span className="w-4 text-center font-mono">{quantity}</span><button onClick={() => changeQuantity(quantity + 1)} className="flex size-9 items-center justify-center rounded-full bg-zinc-100"><Plus className="size-4" /></button></div></div><div className="mt-5 grid grid-cols-[1fr_1.25fr] gap-2"><Button variant="outline" onClick={addToCart}><ShoppingBag className="size-4" />{t("加入购物车")}</Button><Button onClick={buyNow}>{t("直接点单")} · {formatMoney((product.price + delta) * quantity)}</Button></div></div></>}</DialogContent></Dialog>;
 }

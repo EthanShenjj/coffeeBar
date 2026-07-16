@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useI18n } from "@/components/i18n-provider";
 import { authClient } from "@/lib/auth-client";
+import { identifyAnalytics, trackAnalytics } from "@/lib/analytics";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const { t } = useI18n();
@@ -18,9 +19,15 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setPending(true);
+    trackAnalytics("auth_submitted", { auth_mode: mode, has_next: Boolean(params.get("next")) });
     const result = mode === "login" ? await authClient.signIn.email({ email: form.email, password: form.password }) : await authClient.signUp.email({ name: form.name, email: form.email, password: form.password });
     setPending(false);
-    if (result.error) return toast.error(result.error.message ?? t("操作失败"));
+    if (result.error) {
+      trackAnalytics("auth_failed", { auth_mode: mode, has_next: Boolean(params.get("next")) });
+      return toast.error(result.error.message ?? t("操作失败"));
+    }
+    identifyAnalytics(result.data?.user?.id, { auth_mode: mode });
+    trackAnalytics(mode === "login" ? "login" : "regist", { auth_mode: mode, has_next: Boolean(params.get("next")) });
     toast.success(t(mode === "login" ? "欢迎回来" : "注册成功，欢迎加入 CoffeeBar"));
     router.push(params.get("next") || "/profile"); router.refresh();
   }

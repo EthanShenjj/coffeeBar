@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
+import { AnalyticsProvider } from "@/components/analytics-provider";
 import { I18nProvider } from "@/components/i18n-provider";
 import { getLocale } from "@/lib/i18n-server";
 import { createTranslator } from "@/lib/i18n";
@@ -24,7 +25,7 @@ export default async function RootLayout({
     <html lang={locale === "zh" ? "zh-CN" : "en"} data-scroll-behavior="smooth">
       <body className="min-h-screen bg-background text-foreground antialiased">
         <I18nProvider locale={locale}>
-          {children}
+          <AnalyticsProvider>{children}</AnalyticsProvider>
           <Toaster position="top-center" richColors />
         </I18nProvider>
       </body>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { rechargeGiftCard } from "@/actions/gift-card";
@@ -8,6 +8,7 @@ import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { GIFT_CARD_RECHARGE_AMOUNTS } from "@/lib/gift-card";
+import { giftCardAnalytics, rechargeGiftCardWithAnalytics } from "@/lib/gift-card-analytics";
 import { formatMoney } from "@/lib/utils";
 
 export function GiftCardPanel({ balance, persistent }: { balance: number; persistent: boolean }) {
@@ -16,8 +17,16 @@ export function GiftCardPanel({ balance, persistent }: { balance: number; persis
   const [selected, setSelected] = useState<number | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const viewedTracked = useRef(false);
+
+  useEffect(() => {
+    if (viewedTracked.current) return;
+    viewedTracked.current = true;
+    giftCardAnalytics.viewed({ balance, persistent });
+  }, [balance, persistent]);
 
   function choose(amount: number) {
+    giftCardAnalytics.amountSelected({ amount, balance });
     setSelected(amount);
     setToken(crypto.randomUUID());
   }
@@ -26,7 +35,12 @@ export function GiftCardPanel({ balance, persistent }: { balance: number; persis
     if (selected === null || token === null) return;
     setPending(true);
     try {
-      const result = await rechargeGiftCard({ amount: selected, token });
+      const result = await rechargeGiftCardWithAnalytics({
+        recharge: rechargeGiftCard,
+        amount: selected,
+        balance,
+        token,
+      });
       if (!result.ok) {
         toast.error(t(result.message));
         return;

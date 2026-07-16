@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Clock3, MapPin, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input, Textarea } from "@/components/ui/input";
 import { lineTotal, useCartStore } from "@/lib/cart-store";
+import { flushAnalytics, trackAnalytics } from "@/lib/analytics";
 import { calculatePaymentSplit } from "@/lib/gift-card";
+import { trackAppliedGiftCardPayment, trackGiftCardPaymentToggle } from "@/lib/gift-card-analytics";
 import { formatMoney } from "@/lib/utils";
 import type { CartKind, CartLine } from "@/lib/types";
 
@@ -79,6 +81,15 @@ function createPickupTimes() {
   });
 }
 
+function checkoutFailureCode(message: string) {
+  const lower = message.toLowerCase();
+  if (message.includes("登录") || lower.includes("sign in")) return "auth_required";
+  if (message.includes("库存")) return "out_of_stock";
+  if (message.includes("下架") || message.includes("失效")) return "product_unavailable";
+  if (message.includes("规格") || message.includes("请选择")) return "option_invalid";
+  return "unknown";
+}
+
 export function CheckoutView({ kind, direct, giftCardBalance, giftCardPersistent }: { kind: CartKind; direct: boolean; giftCardBalance: number; giftCardPersistent: boolean }) {
   const router = useRouter();
   const { t } = useI18n();
@@ -91,21 +102,42 @@ export function CheckoutView({ kind, direct, giftCardBalance, giftCardPersistent
   const [pending, setPending] = useState(false);
   const [useGiftCard, setUseGiftCard] = useState(false);
   const [form, setForm] = useState({ pickupName: "", pickupPhone: "", pickupAt: "", note: "" });
+  const checkoutTracked = useRef(false);
   const lines = useMemo(() => direct ? (directLine ? [directLine] : []) : cartLines, [cartLines, direct, directLine]);
   const total = useMemo(() => lines.reduce((sum, line) => sum + lineTotal(line), 0), [lines]);
   const split = useMemo(() => calculatePaymentSplit(total, giftCardBalance, useGiftCard), [giftCardBalance, total, useGiftCard]);
   const [times] = useState(createPickupTimes);
+  const checkoutProperties = useMemo(() => ({
+    product_channel: kind,
+    checkout_mode: direct ? "direct" : "cart",
+    item_count: lines.length,
+    quantity_total: lines.reduce((sum, line) => sum + line.quantity, 0),
+    cart_amount_cents: total,
+  }), [direct, kind, lines, total]);
+
+  useEffect(() => {
+    if (checkoutTracked.current || !lines.length) return;
+    checkoutTracked.current = true;
+    trackAnalytics("checkout_started", checkoutProperties);
+  }, [checkoutProperties, lines.length]);
 
   function openConfirm(event: React.FormEvent) {
     event.preventDefault();
     if (!lines.length) return toast.error(t("没有可结算的商品"));
     if (!/^1\d{10}$/.test(form.pickupPhone)) return toast.error(t("请输入 11 位手机号"));
     if (!form.pickupAt) return toast.error(t("请选择取货时间"));
+    trackAnalytics("checkout_form_submitted", { ...checkoutProperties, has_note: Boolean(form.note.trim()), pickup_lead_time_minutes: Math.max(0, Math.round((new Date(form.pickupAt).getTime() - Date.now()) / 60_000)) });
     setConfirming(true);
+  }
+
+  function toggleGiftCard(enabled: boolean) {
+    trackGiftCardPaymentToggle({ enabled, balance: giftCardBalance, orderAmount: total });
+    setUseGiftCard(enabled);
   }
 
   async function pay() {
     setPending(true);
+    trackAnalytics("payment_submitted", checkoutProperties);
     try {
       let token = checkoutTokenRef.current;
       if (!token) {
@@ -126,10 +158,21 @@ export function CheckoutView({ kind, direct, giftCardBalance, giftCardPersistent
 
       const result = await confirmCheckout({ token, kind, ...form, useGiftCard, items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity, optionIds: line.optionIds })) });
       if (!result.ok) {
+        trackAnalytics("order_payment_failed", { ...checkoutProperties, failure_code: checkoutFailureCode(result.message) });
         toast.error(t(result.message));
         if (result.message.includes("登录") || result.message.toLowerCase().includes("sign in")) router.push(`/login?next=${encodeURIComponent(location.pathname + location.search)}`);
         return;
       }
+
+      trackAppliedGiftCardPayment({
+        orderId: result.orderId,
+        productChannel: kind,
+        orderAmount: result.totalAmount,
+        giftCardAmount: result.giftCardAmount,
+        externalAmount: result.externalAmount,
+      });
+      trackAnalytics("order_payment_succeeded", { ...checkoutProperties, order_id: result.orderId, order_amount_cents: result.totalAmount, is_demo: result.demo });
+      await flushAnalytics();
 
       const successParams = new URLSearchParams({
         order: result.orderNumber,
@@ -191,7 +234,7 @@ export function CheckoutView({ kind, direct, giftCardBalance, giftCardPersistent
         <div className="mt-5 flex items-end justify-between"><span className="text-sm text-zinc-500">{t("应付金额")}</span><span className="font-mono text-3xl font-semibold tracking-tight">{formatMoney(total)}</span></div>
         <div className="mt-5 rounded-2xl bg-zinc-100 p-4">
           <label className={`flex items-center justify-between gap-3 ${giftCardPersistent && giftCardBalance > 0 ? "cursor-pointer" : "cursor-not-allowed text-zinc-400"}`}>
-            <span className="flex items-center gap-3 text-sm font-medium"><input type="checkbox" checked={useGiftCard} onChange={(event) => setUseGiftCard(event.target.checked)} disabled={!giftCardPersistent || giftCardBalance <= 0} className="size-4 accent-black" />{t("使用购物卡")}</span>
+            <span className="flex items-center gap-3 text-sm font-medium"><input type="checkbox" checked={useGiftCard} onChange={(event) => toggleGiftCard(event.target.checked)} disabled={!giftCardPersistent || giftCardBalance <= 0} className="size-4 accent-black" />{t("使用购物卡")}</span>
             <span className="font-mono text-sm">{formatMoney(giftCardBalance)}</span>
           </label>
           {useGiftCard && <div className="mt-4 space-y-2 border-t border-zinc-200 pt-4 text-sm"><p className="flex items-center justify-between text-zinc-500"><span>{t("购物卡支付")}</span><span className="font-mono">{formatMoney(split.giftCardAmount)}</span></p><p className="flex items-center justify-between text-zinc-500"><span>{t("模拟付费")}</span><span className="font-mono">{formatMoney(split.externalAmount)}</span></p></div>}

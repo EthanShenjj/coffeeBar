@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { ArrowRight, Clock3, MapPin } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
 import { SiteHeader } from "@/components/site-header";
+import { TrackedLink } from "@/components/tracked-link";
 import { getSession } from "@/lib/auth";
 import { getTranslator } from "@/lib/i18n-server";
 import { cn } from "@/lib/utils";
@@ -29,8 +29,8 @@ export default async function HomePage() {
             <h1 className="display-title mt-6 text-6xl font-semibold md:text-8xl">{headlineTop}<br />{headlineBottom}</h1>
             <p className="mt-7 max-w-md text-sm leading-7 text-zinc-500 md:text-base">{t("认真做每一杯，也认真留出一点不着急的时间。线上点单，到店即取。")}</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/menu" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-black px-6 text-sm font-medium text-white transition hover:bg-zinc-800">{t("立即点单")}<ArrowRight className="size-4" /></Link>
-              <Link href="/shop" className="inline-flex min-h-12 items-center justify-center rounded-full border bg-white px-6 text-sm font-medium transition hover:bg-zinc-50">{t("逛逛商店")}</Link>
+              <TrackedLink href="/menu" eventName="home_cta_clicked" eventProperties={{ cta_name: "order_now", target_path: "/menu" }} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-black px-6 text-sm font-medium text-white transition hover:bg-zinc-800">{t("立即点单")}<ArrowRight className="size-4" /></TrackedLink>
+              <TrackedLink href="/shop" eventName="home_cta_clicked" eventProperties={{ cta_name: "shop_now", target_path: "/shop" }} className="inline-flex min-h-12 items-center justify-center rounded-full border bg-white px-6 text-sm font-medium transition hover:bg-zinc-50">{t("逛逛商店")}</TrackedLink>
             </div>
             <div className="mt-10 flex flex-wrap gap-x-6 gap-y-3 border-t pt-6 text-xs text-zinc-500">
               <span className="flex items-center gap-2"><Clock3 className="size-4 text-black" />{t("预计 15 分钟出杯")}</span>
@@ -50,11 +50,11 @@ export default async function HomePage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-5 pb-16">
-        <div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-xs font-medium uppercase tracking-[.22em] text-zinc-400">Start here</p><h2 className="mt-2 text-3xl font-semibold tracking-[-.045em] md:text-4xl">{t("今天想喝什么？")}</h2></div><Link href="/menu" className="hidden items-center gap-2 text-sm font-medium sm:flex">{t("查看完整菜单")}<ArrowRight className="size-4" /></Link></div>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{coffeeShortcuts.map((item) => <Link href="/menu" key={item.name} className={cn("group overflow-hidden rounded-[1.5rem] border p-3 transition hover:-translate-y-1 hover:shadow-xl hover:shadow-black/5", item.tone)}>
+        <div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-xs font-medium uppercase tracking-[.22em] text-zinc-400">Start here</p><h2 className="mt-2 text-3xl font-semibold tracking-[-.045em] md:text-4xl">{t("今天想喝什么？")}</h2></div><TrackedLink href="/menu" eventName="home_cta_clicked" eventProperties={{ cta_name: "full_menu", target_path: "/menu" }} className="hidden items-center gap-2 text-sm font-medium sm:flex">{t("查看完整菜单")}<ArrowRight className="size-4" /></TrackedLink></div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{coffeeShortcuts.map((item) => <TrackedLink href="/menu" eventName="home_cta_clicked" eventProperties={{ cta_name: "coffee_shortcut", shortcut_name: item.name, target_path: "/menu" }} key={item.name} className={cn("group overflow-hidden rounded-[1.5rem] border p-3 transition hover:-translate-y-1 hover:shadow-xl hover:shadow-black/5", item.tone)}>
           <div className="relative aspect-square overflow-hidden rounded-[1.1rem] bg-[#f5efe4]"><CoffeeArtwork position={item.position} /></div>
           <div className="flex items-end justify-between gap-3 px-1 pb-1 pt-4"><div><h3 className="font-medium">{t(item.name)}</h3><p className={cn("mt-1 text-xs", item.tone.includes("text-white") ? "text-white/55" : "text-zinc-500")}>{t(item.note)}</p></div><ArrowRight className="mb-1 size-4 transition group-hover:translate-x-1" /></div>
-        </Link>)}</div>
+        </TrackedLink>)}</div>
       </section>
 
       <section className="bg-black text-white">
@@ -66,7 +66,7 @@ export default async function HomePage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-5 py-14 md:py-20">
-        <div className="flex flex-col gap-6 rounded-[2rem] border bg-white p-7 md:flex-row md:items-center md:justify-between md:p-12"><div><p className="text-xs font-medium uppercase tracking-[.22em] text-zinc-400">Objects for coffee</p><h2 className="mt-3 text-3xl font-semibold tracking-[-.045em]">{t("把咖啡日常带回家。")}</h2><p className="mt-3 max-w-xl text-sm leading-6 text-zinc-500">{t("杯子、滤杯和磨豆机，简洁耐用，支持门店自取。")}</p></div><Link href="/shop" className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-black px-6 text-sm font-medium text-white">{t("进入商店")}<ArrowRight className="size-4" /></Link></div>
+        <div className="flex flex-col gap-6 rounded-[2rem] border bg-white p-7 md:flex-row md:items-center md:justify-between md:p-12"><div><p className="text-xs font-medium uppercase tracking-[.22em] text-zinc-400">Objects for coffee</p><h2 className="mt-3 text-3xl font-semibold tracking-[-.045em]">{t("把咖啡日常带回家。")}</h2><p className="mt-3 max-w-xl text-sm leading-6 text-zinc-500">{t("杯子、滤杯和磨豆机，简洁耐用，支持门店自取。")}</p></div><TrackedLink href="/shop" eventName="home_cta_clicked" eventProperties={{ cta_name: "shop_section", target_path: "/shop" }} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-black px-6 text-sm font-medium text-white">{t("进入商店")}<ArrowRight className="size-4" /></TrackedLink></div>
       </section>
     </main>
   </AppFrame>;

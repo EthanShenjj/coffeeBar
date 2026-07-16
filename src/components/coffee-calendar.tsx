@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Coffee } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/i18n-provider";
+import { trackAnalytics } from "@/lib/analytics";
 
 const zhWeekDays = ["一", "二", "三", "四", "五", "六", "日"];
 const enWeekDays = ["M", "T", "W", "T", "F", "S", "S"];
@@ -43,6 +44,7 @@ export function CoffeeCalendar({ coffeeDays, today }: { coffeeDays: string[]; to
   const isFirstMonth = visibleMonth.year === calendarStartYear && visibleMonth.month === 0;
 
   function selectYear(year: number) {
+    trackAnalytics("coffee_calendar_navigated", { navigation_type: "year", year });
     setVisibleMonth((month) => ({
       year,
       month: year === current.year ? Math.min(month.month, current.month) : month.month,
@@ -84,7 +86,7 @@ export function CoffeeCalendar({ coffeeDays, today }: { coffeeDays: string[]; to
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => setVisibleMonth((month) => moveMonth(month, -1))}
+            onClick={() => { trackAnalytics("coffee_calendar_navigated", { navigation_type: "previous_month", year: visibleMonth.year, month: visibleMonth.month + 1 }); setVisibleMonth((month) => moveMonth(month, -1)); }}
             disabled={isFirstMonth}
             className="flex size-9 items-center justify-center rounded-full border bg-white hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300 disabled:hover:bg-white"
             aria-label={t("上个月")}
@@ -93,7 +95,7 @@ export function CoffeeCalendar({ coffeeDays, today }: { coffeeDays: string[]; to
           </button>
           <button
             type="button"
-            onClick={() => setVisibleMonth((month) => moveMonth(month, 1))}
+            onClick={() => { trackAnalytics("coffee_calendar_navigated", { navigation_type: "next_month", year: visibleMonth.year, month: visibleMonth.month + 1 }); setVisibleMonth((month) => moveMonth(month, 1)); }}
             disabled={isCurrentMonth}
             className="flex size-9 items-center justify-center rounded-full border bg-white hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-300 disabled:hover:bg-white"
             aria-label={t("下个月")}
