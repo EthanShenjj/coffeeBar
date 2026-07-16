@@ -15,11 +15,26 @@ const thinkingDataEnabled = Boolean(thinkingDataAppId && thinkingDataServerUrl);
 const enabled = Boolean(amplitudeApiKey || mixpanelProjectToken || thinkingDataEnabled);
 
 let initialized = false;
-type ThinkingDataClient = typeof import("thinkingdata-browser").default;
+type ThinkingDataClient = {
+  init: (config: Record<string, unknown>) => void;
+  track: (eventName: string, eventProperties?: Record<string, unknown>) => void;
+  login: (accountId: string) => void;
+  userSet: (userProperties: Record<string, unknown>) => void;
+  flush: () => void;
+};
+
+declare global {
+  interface Window {
+    thinkingdata?: ThinkingDataClient;
+  }
+}
+
 let thinkingDataClient: ThinkingDataClient | null = null;
 let thinkingDataLoading: Promise<ThinkingDataClient | null> | null = null;
+let thinkingDataInitialized = false;
 let pendingThinkingDataEvents: Array<{ eventName: string; payload: AnalyticsProperties }> = [];
 let pendingThinkingDataIdentity: { userId: string; properties: AnalyticsProperties } | null = null;
+const thinkingDataScriptSrc = "/vendor/thinkingdata.umd.min.js";
 
 function cleanProperties(properties: AnalyticsProperties = {}) {
   return Object.fromEntries(
@@ -36,34 +51,67 @@ function baseProperties() {
 }
 
 function initThinkingData() {
-  if (!thinkingDataEnabled || thinkingDataClient || thinkingDataLoading) return;
+  if (!thinkingDataEnabled || typeof window === "undefined") return;
 
-  thinkingDataLoading = import("thinkingdata-browser")
-    .then((module) => {
-      const client = module.default;
-      client.init({
-        appId: thinkingDataAppId,
-        serverUrl: thinkingDataServerUrl,
-        autoTrack: false,
-        batch: true,
-        send_method: "ajax",
-        showLog: process.env.NODE_ENV !== "production",
-      });
-      thinkingDataClient = client;
+  if (window.thinkingdata) {
+    initializeThinkingDataClient(window.thinkingdata);
+    return;
+  }
 
-      if (pendingThinkingDataIdentity) {
-        client.login(pendingThinkingDataIdentity.userId);
-        if (Object.keys(pendingThinkingDataIdentity.properties).length) {
-          client.userSet(pendingThinkingDataIdentity.properties);
-        }
-        pendingThinkingDataIdentity = null;
+  if (thinkingDataLoading) return;
+
+  thinkingDataLoading = new Promise<ThinkingDataClient | null>((resolve) => {
+    const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${thinkingDataScriptSrc}"]`);
+
+    function complete() {
+      const client = window.thinkingdata ?? null;
+      if (client) initializeThinkingDataClient(client);
+      resolve(client);
+    }
+
+    if (existingScript) {
+      existingScript.addEventListener("load", complete, { once: true });
+      existingScript.addEventListener("error", () => resolve(null), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = thinkingDataScriptSrc;
+    script.async = true;
+    script.dataset.analyticsVendor = "thinkingdata";
+    script.addEventListener("load", complete, { once: true });
+    script.addEventListener("error", () => resolve(null), { once: true });
+    document.head.appendChild(script);
+  });
+}
+
+function initializeThinkingDataClient(client: ThinkingDataClient) {
+  if (thinkingDataInitialized) return;
+
+  try {
+    client.init({
+      appId: thinkingDataAppId,
+      serverUrl: thinkingDataServerUrl,
+      autoTrack: false,
+      batch: false,
+      send_method: "ajax",
+      showLog: process.env.NODE_ENV !== "production",
+    });
+    thinkingDataClient = client;
+    thinkingDataInitialized = true;
+
+    if (pendingThinkingDataIdentity) {
+      client.login(pendingThinkingDataIdentity.userId);
+      if (Object.keys(pendingThinkingDataIdentity.properties).length) {
+        client.userSet(pendingThinkingDataIdentity.properties);
       }
-      pendingThinkingDataEvents.forEach((event) => client.track(event.eventName, event.payload));
-      pendingThinkingDataEvents = [];
-
-      return client;
-    })
-    .catch(() => null);
+      pendingThinkingDataIdentity = null;
+    }
+    pendingThinkingDataEvents.forEach((event) => client.track(event.eventName, event.payload));
+    pendingThinkingDataEvents = [];
+  } catch {
+    thinkingDataClient = null;
+  }
 }
 
 function trackThinkingData(eventName: string, payload: AnalyticsProperties) {
