@@ -13,7 +13,6 @@ const thinkingDataAppId = process.env.NEXT_PUBLIC_THINKINGDATA_APP_ID;
 const thinkingDataServerUrl = process.env.NEXT_PUBLIC_THINKINGDATA_SERVER_URL;
 const thinkingDataEnabled = Boolean(thinkingDataAppId && thinkingDataServerUrl);
 const enabled = Boolean(amplitudeApiKey || mixpanelProjectToken || thinkingDataEnabled);
-const thinkingDataProxyPath = "/api/analytics/thinkingdata";
 
 let initialized = false;
 type ThinkingDataClient = {
@@ -92,7 +91,7 @@ function initializeThinkingDataClient(client: ThinkingDataClient) {
   try {
     client.init({
       appId: thinkingDataAppId,
-      serverUrl: `${window.location.origin}${thinkingDataProxyPath}`,
+      serverUrl: window.location.origin,
       autoTrack: false,
       batch: false,
       send_method: "ajax",

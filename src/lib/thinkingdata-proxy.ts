@@ -1,23 +1,15 @@
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-
-type ThinkingDataProxyContext = {
-  params: Promise<{ path?: string[] }>;
-};
-
 function thinkingDataBaseUrl() {
   return process.env.NEXT_PUBLIC_THINKINGDATA_SERVER_URL?.replace(/\/$/, "");
 }
 
-async function proxyThinkingData(request: Request, context: ThinkingDataProxyContext) {
+export async function proxyThinkingDataRequest(request: Request, path: "config" | "sync_js") {
   const baseUrl = thinkingDataBaseUrl();
   if (!baseUrl) {
     return NextResponse.json({ error: "ThinkingData server URL is not configured" }, { status: 500 });
   }
 
-  const params = await context.params;
-  const path = params.path?.join("/") ?? "";
   const sourceUrl = new URL(request.url);
   const targetUrl = new URL(`${baseUrl}/${path}`);
   targetUrl.search = sourceUrl.search;
@@ -40,12 +32,4 @@ async function proxyThinkingData(request: Request, context: ThinkingDataProxyCon
       "content-type": response.headers.get("content-type") ?? "text/plain; charset=utf-8",
     },
   });
-}
-
-export async function GET(request: Request, context: ThinkingDataProxyContext) {
-  return proxyThinkingData(request, context);
-}
-
-export async function POST(request: Request, context: ThinkingDataProxyContext) {
-  return proxyThinkingData(request, context);
 }
