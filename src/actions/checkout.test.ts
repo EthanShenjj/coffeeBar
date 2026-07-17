@@ -36,13 +36,16 @@ describe("confirmCheckout web wrapper", () => {
     mocks.hasDatabase.mockReturnValue(true);
     mocks.requireUser.mockResolvedValue({ id: "user-1" });
     mocks.checkoutForUser.mockResolvedValue({
-      ok: true,
-      orderId: "order-1",
-      orderNumber: "CB1",
-      totalAmount: 12800,
-      giftCardAmount: 10000,
-      externalAmount: 2800,
-      demo: false,
+      created: true,
+      result: {
+        ok: true,
+        orderId: "order-1",
+        orderNumber: "CB1",
+        totalAmount: 12800,
+        giftCardAmount: 10000,
+        externalAmount: 2800,
+        demo: false,
+      },
     });
   });
 
@@ -57,5 +60,24 @@ describe("confirmCheckout web wrapper", () => {
   it("preserves the login prompt for signed-out customers", async () => {
     mocks.requireUser.mockRejectedValueOnce(new Error("请先登录后再继续"));
     await expect(confirmCheckout(input)).resolves.toEqual({ ok: false, message: "请先登录后再继续" });
+  });
+
+  it("does not revalidate an idempotent existing or concurrent winning order", async () => {
+    mocks.checkoutForUser.mockResolvedValueOnce({
+      created: false,
+      result: {
+        ok: true,
+        orderId: "order-existing",
+        orderNumber: "CB-EXISTING",
+        totalAmount: 12800,
+        giftCardAmount: 10000,
+        externalAmount: 2800,
+        demo: false,
+      },
+    });
+
+    await expect(confirmCheckout(input)).resolves.toMatchObject({ ok: true, orderId: "order-existing" });
+    expect(mocks.updateTag).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 });

@@ -54,19 +54,25 @@ describe("checkoutForUser", () => {
     mocks.transaction.mockRejectedValueOnce(new Error("Unique constraint failed"));
 
     await expect(checkoutForUser("user-1", input)).resolves.toEqual({
-      ok: true,
-      orderId: "order-winning",
-      orderNumber: "CB202607160001",
-      totalAmount: 12800,
-      giftCardAmount: 10000,
-      externalAmount: 2800,
-      demo: false,
+      created: false,
+      result: {
+        ok: true,
+        orderId: "order-winning",
+        orderNumber: "CB202607160001",
+        totalAmount: 12800,
+        giftCardAmount: 10000,
+        externalAmount: 2800,
+        demo: false,
+      },
     });
   });
 
   it("rejects another user's idempotent checkout token", async () => {
     mocks.orderFindUnique.mockResolvedValueOnce({ ...winningOrder, userId: "user-2" });
-    await expect(checkoutForUser("user-1", input)).resolves.toEqual({ ok: false, message: "结算令牌不可用" });
+    await expect(checkoutForUser("user-1", input)).resolves.toEqual({
+      created: false,
+      result: { ok: false, message: "结算令牌不可用" },
+    });
   });
 
   it("does not leak unexpected database errors", async () => {
@@ -74,7 +80,23 @@ describe("checkoutForUser", () => {
     mocks.transaction.mockRejectedValueOnce(new Error("password=database-secret"));
 
     const result = await checkoutForUser("user-1", input);
-    expect(result).toEqual({ ok: false, message: "支付未完成，请稍后重试" });
+    expect(result).toEqual({
+      created: false,
+      result: { ok: false, message: "支付未完成，请稍后重试" },
+    });
     expect(JSON.stringify(result)).not.toContain("database-secret");
+  });
+
+  it("marks only a newly committed order as created", async () => {
+    mocks.orderFindUnique.mockResolvedValueOnce(null);
+    mocks.transaction.mockResolvedValueOnce({
+      order: { id: "order-new", orderNumber: "CB-NEW" },
+      split: { giftCardAmount: 10000, externalAmount: 2800 },
+    });
+
+    await expect(checkoutForUser("user-1", input)).resolves.toMatchObject({
+      created: true,
+      result: { ok: true, orderId: "order-new" },
+    });
   });
 });

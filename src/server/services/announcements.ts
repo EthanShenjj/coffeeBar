@@ -18,15 +18,9 @@ export function getAnnouncementForUser(userId: string, announcementId: string) {
 }
 
 export async function markAnnouncementReadForUser(userId: string, announcementId: string) {
-  const announcement = await getDb().announcement.findFirst({
-    where: { id: announcementId, ...publishedWhere() },
-    select: { id: true },
-  });
-  if (!announcement) return false;
   await getDb().messageReceipt.upsert({
     where: { userId_announcementId: { userId, announcementId } },
     create: { userId, announcementId },
     update: { readAt: new Date() },
   });
-  return true;
 }

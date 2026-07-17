@@ -26,11 +26,7 @@ function normalizeOrigin(value: string) {
   return null;
 }
 
-export function buildTrustedOrigins(env: OriginEnvironment = {
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-  MOBILE_ALLOWED_ORIGIN: process.env.MOBILE_ALLOWED_ORIGIN,
-}) {
+export function buildTrustedOrigins(env: OriginEnvironment) {
   const configured = [
     env.NEXT_PUBLIC_APP_URL,
     env.BETTER_AUTH_URL,
@@ -58,7 +54,11 @@ function createAuth() {
   return betterAuth({
       secret: process.env.BETTER_AUTH_SECRET,
       baseURL: process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL,
-      trustedOrigins: buildTrustedOrigins(),
+      trustedOrigins: buildTrustedOrigins({
+        NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+        BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+        MOBILE_ALLOWED_ORIGIN: process.env.MOBILE_ALLOWED_ORIGIN,
+      }),
       database: prismaAdapter(getDb(), { provider: "postgresql" }),
       emailAndPassword: {
         enabled: true,

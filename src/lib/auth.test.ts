@@ -43,6 +43,10 @@ describe("buildTrustedOrigins", () => {
       "capacitor://other",
     ]);
   });
+
+  it("requires explicit input instead of reading process environment implicitly", () => {
+    expect(() => (buildTrustedOrigins as unknown as () => string[])()).toThrow();
+  });
 });
 
 describe("request header authentication", () => {

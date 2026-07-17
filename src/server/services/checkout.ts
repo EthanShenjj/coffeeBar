@@ -7,6 +7,15 @@ export type CheckoutResult =
   | { ok: true; orderId: string; orderNumber: string; totalAmount: number; giftCardAmount: number; externalAmount: number; demo: boolean }
   | { ok: false; message: string };
 
+export type CheckoutServiceResult = {
+  result: CheckoutResult;
+  created: boolean;
+};
+
+function unchanged(result: CheckoutResult): CheckoutServiceResult {
+  return { result, created: false };
+}
+
 type ExistingCheckoutOrder = {
   id: string;
   orderNumber: string;
@@ -44,22 +53,22 @@ export function sanitizeCheckoutError(error: unknown) {
   return "支付未完成，请稍后重试";
 }
 
-export async function checkoutForUser(userId: string, raw: unknown): Promise<CheckoutResult> {
+export async function checkoutForUser(userId: string, raw: unknown): Promise<CheckoutServiceResult> {
   const parsed = checkoutSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "结算信息有误" };
+  if (!parsed.success) return unchanged({ ok: false, message: parsed.error.issues[0]?.message ?? "结算信息有误" });
   const input = parsed.data;
 
   try {
     const db = getDb();
     const existing = await db.order.findUnique({ where: { checkoutToken: input.token }, include: { payment: true } });
-    if (existing) return resultFromExistingOrder(existing, userId);
+    if (existing) return unchanged(resultFromExistingOrder(existing, userId));
 
     const productIds = [...new Set(input.items.map((item) => item.productId))];
     const products = await db.product.findMany({
       where: { id: { in: productIds }, isAvailable: true },
       include: { optionGroups: { include: { options: { where: { isAvailable: true } } } } },
     });
-    if (products.length !== productIds.length) return { ok: false, message: "部分商品已下架，请刷新购物车" };
+    if (products.length !== productIds.length) return unchanged({ ok: false, message: "部分商品已下架，请刷新购物车" });
 
     const snapshots = input.items.map((line) => {
       const product = products.find((entry) => entry.id === line.productId)!;
@@ -123,16 +132,19 @@ export async function checkoutForUser(userId: string, raw: unknown): Promise<Che
       });
     } catch (transactionError) {
       const winningOrder = await db.order.findUnique({ where: { checkoutToken: input.token }, include: { payment: true } });
-      if (winningOrder) return resultFromExistingOrder(winningOrder, userId);
+      if (winningOrder) return unchanged(resultFromExistingOrder(winningOrder, userId));
       throw transactionError;
     }
 
     return {
-      ok: true, orderId: transactionResult.order.id, orderNumber: transactionResult.order.orderNumber,
-      totalAmount, giftCardAmount: transactionResult.split.giftCardAmount,
-      externalAmount: transactionResult.split.externalAmount, demo: false,
+      created: true,
+      result: {
+        ok: true, orderId: transactionResult.order.id, orderNumber: transactionResult.order.orderNumber,
+        totalAmount, giftCardAmount: transactionResult.split.giftCardAmount,
+        externalAmount: transactionResult.split.externalAmount, demo: false,
+      },
     };
   } catch (error) {
-    return { ok: false, message: sanitizeCheckoutError(error) };
+    return unchanged({ ok: false, message: sanitizeCheckoutError(error) });
   }
 }

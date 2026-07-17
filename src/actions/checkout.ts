@@ -31,12 +31,12 @@ export async function confirmCheckout(raw: unknown): Promise<CheckoutResult> {
 
   try {
     const user = await requireUser();
-    const result = await checkoutForUser(user.id, input);
-    if (result.ok) {
+    const serviceResult = await checkoutForUser(user.id, input);
+    if (serviceResult.created) {
       updateTag(PRODUCT_CATALOG_CACHE_TAG);
       for (const path of ["/profile", "/profile/orders", "/profile/gift-card", "/checkout", "/admin"]) revalidatePath(path);
     }
-    return result;
+    return serviceResult.result;
   } catch (error) {
     return { ok: false, message: sanitizeCheckoutError(error) };
   }
