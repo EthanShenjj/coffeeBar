@@ -73,6 +73,8 @@ const services = {
   analytics,
   locale: createLocaleStore(localStorage),
   native,
+  appVersion: import.meta.env.VITE_APP_VERSION ?? "0.0.0",
+  nativePlatform: Capacitor.isNativePlatform(),
 };
 
 async function bootstrap() {

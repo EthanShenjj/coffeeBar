@@ -1,6 +1,6 @@
 # CoffeeBar
 
-移动优先的单店咖啡点单与生活方式商店。项目使用 Next.js 16、React 19、Tailwind CSS 4、Better Auth、Prisma 7 和 PostgreSQL。
+移动优先的单店咖啡点单与生活方式商店。项目使用 Next.js 16、React 19、Tailwind CSS 4、Better Auth、Prisma 7 和 PostgreSQL，并包含 Vite + Capacitor 8 的 iOS 顾客端。
 
 ## 已实现
 
@@ -11,6 +11,8 @@
 - L1–L8 会员等级、消费统计、历史订单和站内消息
 - 商品、订单、活动消息运营后台及 Vercel Blob 上传接口
 - 无数据库时可直接浏览的演示模式
+- iOS 本地前端 bundle、Keychain Bearer 会话、离线目录与双购物车
+- iOS 深链、首单后推送授权、订单状态 APNs 通知和应用内账户删除
 
 ## 本地启动
 
@@ -42,6 +44,21 @@ npm run dev
 - `THINKINGDATA_EXPERIMENT_FETCH_URL`: ThinkingData Web Experiment 远端分流 Fetch 完整地址；由实验服务提供方确认，未配置或请求失败时登录页使用原始文案
 - `THINKINGDATA_WEBHOOK_SECRET`: ThinkingData AE Webhook 通道鉴权密钥；配置后接口会校验 `X-AE-OPS-Signature` / `X-TE-OPS-Signature` 的 HmacSHA1 签名
 - `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`: 首次种子管理员，仅通过安全环境变量提供
+- `MOBILE_ALLOWED_ORIGIN`: iOS 固定使用 `capacitor://localhost`
+- `IOS_MINIMUM_VERSION` / `IOS_MAINTENANCE_MODE`: iOS 版本与维护门禁
+- `APNS_TEAM_ID` / `APNS_KEY_ID` / `APNS_PRIVATE_KEY_BASE64` / `APNS_BUNDLE_ID` / `APNS_ENVIRONMENT`: 仅服务端使用的 APNs 配置
+
+## iOS 客户端
+
+Web 与 API 继续部署在 Vercel；iOS 页面由 `mobile/` 构建并打包进 `mobile/ios/`，不是从 Vercel 在线加载页面。App 只通过 HTTPS 请求 Vercel API。
+
+```bash
+npm run mobile:test
+npm run mobile:build
+npm run mobile:sync
+```
+
+公开构建变量参考 `mobile/.env.example`。完整 Xcode、签名、APNs 与 TestFlight 步骤见 [iOS / TestFlight 发布手册](docs/ios-testflight.md)。
 
 ## ThinkingData Webhook 通道
 
@@ -70,6 +87,9 @@ npm run typecheck
 npm test
 npm run build
 npm run test:e2e
+npm run mobile:test
+npm run mobile:build
+npm run mobile:sync
 ```
 
 数据库迁移和种子命令必须在 Vercel 项目关联、资源创建和环境变量完整后执行。真实支付、配送、多门店、优惠、退款与营销推送不在首版范围内。

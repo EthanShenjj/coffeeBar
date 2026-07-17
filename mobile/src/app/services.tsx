@@ -19,6 +19,8 @@ export type AppServices = {
   analytics: MobileAnalytics;
   locale: LocaleStore;
   native?: NativeExperience;
+  appVersion?: string;
+  nativePlatform?: boolean;
 };
 
 const ServicesContext = createContext<AppServices | null>(null);
