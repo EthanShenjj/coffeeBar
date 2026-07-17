@@ -17,8 +17,8 @@ export function GET(request: Request) {
   return executeApi(request, { access: "public" }, () => {
     const base = appBaseUrl();
     return validateApiOutput(appConfigSchema, {
-      minimumIosVersion: process.env.MINIMUM_IOS_VERSION ?? "1.0.0",
-      maintenance: process.env.APP_MAINTENANCE_MODE === "true",
+      minimumIosVersion: process.env.IOS_MINIMUM_VERSION ?? "1.0.0",
+      maintenance: process.env.IOS_MAINTENANCE_MODE === "true",
       privacyUrl: new URL("/privacy", base).toString(),
       supportUrl: new URL("/support", base).toString(),
       apiVersion: "v1",

@@ -72,6 +72,8 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_APP_URL = "https://coffee.example";
   process.env.BETTER_AUTH_URL = "https://coffee.example";
   delete process.env.MOBILE_ALLOWED_ORIGIN;
+  delete process.env.IOS_MINIMUM_VERSION;
+  delete process.env.IOS_MAINTENANCE_MODE;
   delete process.env.MINIMUM_IOS_VERSION;
   delete process.env.APP_MAINTENANCE_MODE;
 });
@@ -93,6 +95,28 @@ describe("/api/v1 customer routes", () => {
     } });
   });
 
+  it("reads the planned iOS app-config environment names", async () => {
+    process.env.IOS_MINIMUM_VERSION = "2.3.4";
+    process.env.IOS_MAINTENANCE_MODE = "true";
+    const response = await getAppConfig(request("/api/v1/app-config"));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ data: {
+      minimumIosVersion: "2.3.4",
+      maintenance: true,
+    } });
+  });
+
+  it("ignores legacy iOS app-config environment names", async () => {
+    process.env.MINIMUM_IOS_VERSION = "9.9.9";
+    process.env.APP_MAINTENANCE_MODE = "true";
+    const response = await getAppConfig(request("/api/v1/app-config"));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ data: {
+      minimumIosVersion: "1.0.0",
+      maintenance: false,
+    } });
+  });
+
   it("fails app-config closed in production without a database", async () => {
     mocks.hasDatabase.mockReturnValue(false);
     vi.stubEnv("NODE_ENV", "production");
@@ -102,7 +126,7 @@ describe("/api/v1 customer routes", () => {
   });
 
   it("returns a sanitized server error for invalid app-config output", async () => {
-    process.env.MINIMUM_IOS_VERSION = "not-a-version postgres-password=secret";
+    process.env.IOS_MINIMUM_VERSION = "not-a-version postgres-password=secret";
     const response = await getAppConfig(request("/api/v1/app-config"));
     expect(response.status).toBe(500);
     const body = await response.json();
