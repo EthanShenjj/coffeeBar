@@ -7,7 +7,15 @@ import { hasDatabase } from "@/lib/db";
 import { markAnnouncementReadForUser } from "@/server/services/announcements";
 import { updateProfileForUser } from "@/server/services/profiles";
 
-const profileSchema = z.object({ name: z.string().trim().min(2).max(40), phone: z.string().regex(/^1\d{10}$/).or(z.literal("")), birthday: z.string().optional() });
+const birthdaySchema = z.string().refine((value) => {
+  if (value === "") return true;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const [, year, month, day] = match.map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}, "生日格式有误");
+const profileSchema = z.object({ name: z.string().trim().min(2).max(40), phone: z.string().regex(/^1\d{10}$/).or(z.literal("")), birthday: birthdaySchema.optional() });
 
 export async function updateProfile(raw: unknown) {
   const parsed = profileSchema.safeParse(raw);
@@ -18,7 +26,7 @@ export async function updateProfile(raw: unknown) {
     await updateProfileForUser(user.id, parsed.data);
     revalidatePath("/profile");
     return { ok: true, message: "个人资料已更新" };
-  } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "保存失败" }; }
+  } catch { return { ok: false, message: "保存失败" }; }
 }
 
 export async function markMessageRead(id: string) {

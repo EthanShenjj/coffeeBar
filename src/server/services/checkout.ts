@@ -7,10 +7,11 @@ export type CheckoutResult =
   | { ok: true; orderId: string; orderNumber: string; totalAmount: number; giftCardAmount: number; externalAmount: number; demo: boolean }
   | { ok: false; message: string };
 
-export type CheckoutServiceResult = {
-  result: CheckoutResult;
-  created: boolean;
-};
+type CheckoutSuccess = Extract<CheckoutResult, { ok: true }>;
+
+export type CheckoutServiceResult =
+  | { result: CheckoutSuccess; created: true }
+  | { result: CheckoutResult; created: false };
 
 function unchanged(result: CheckoutResult): CheckoutServiceResult {
   return { result, created: false };
@@ -23,6 +24,14 @@ type ExistingCheckoutOrder = {
   totalAmount: number;
   payment: { giftCardAmount: number; externalAmount: number } | null;
 };
+
+const existingOrderSelect = {
+  id: true,
+  orderNumber: true,
+  userId: true,
+  totalAmount: true,
+  payment: { select: { giftCardAmount: true, externalAmount: true } },
+} as const;
 
 function resultFromExistingOrder(order: ExistingCheckoutOrder, userId: string): CheckoutResult {
   if (order.userId !== userId) return { ok: false, message: "结算令牌不可用" };
@@ -42,6 +51,7 @@ const checkoutErrorMessages = new Set([
   "购物卡余额已变化，请重试支付",
   "餐饮与商店商品不能混合结算",
   "商品规格已变化，请重新选择",
+  "部分商品已下架，请刷新购物车",
 ]);
 
 export function sanitizeCheckoutError(error: unknown) {
@@ -60,42 +70,39 @@ export async function checkoutForUser(userId: string, raw: unknown): Promise<Che
 
   try {
     const db = getDb();
-    const existing = await db.order.findUnique({ where: { checkoutToken: input.token }, include: { payment: true } });
+    const existing = await db.order.findUnique({ where: { checkoutToken: input.token }, select: existingOrderSelect });
     if (existing) return unchanged(resultFromExistingOrder(existing, userId));
-
-    const productIds = [...new Set(input.items.map((item) => item.productId))];
-    const products = await db.product.findMany({
-      where: { id: { in: productIds }, isAvailable: true },
-      include: { optionGroups: { include: { options: { where: { isAvailable: true } } } } },
-    });
-    if (products.length !== productIds.length) return unchanged({ ok: false, message: "部分商品已下架，请刷新购物车" });
-
-    const snapshots = input.items.map((line) => {
-      const product = products.find((entry) => entry.id === line.productId)!;
-      if (product.channel !== input.kind) throw new Error("餐饮与商店商品不能混合结算");
-      const selected = product.optionGroups.flatMap((group) => {
-        const options = group.options.filter((option) => line.optionIds.includes(option.id));
-        if (group.isRequired && options.length < group.minSelect) throw new Error(`请选择${group.name}`);
-        if (options.length > group.maxSelect) throw new Error(`${group.name}选择数量超出限制`);
-        return options;
-      });
-      const allowedIds = new Set(selected.map((option) => option.id));
-      if (line.optionIds.some((id) => !allowedIds.has(id))) throw new Error("商品规格已变化，请重新选择");
-      const unitPrice = product.basePrice + selected.reduce((sum, option) => sum + option.priceDelta, 0);
-      return {
-        product,
-        quantity: line.quantity,
-        unitPrice,
-        subtotal: unitPrice * line.quantity,
-        options: selected.map((option) => ({ id: option.id, name: option.name, priceDelta: option.priceDelta })),
-      };
-    });
-    const totalAmount = snapshots.reduce((sum, item) => sum + item.subtotal, 0);
-    const now = new Date();
 
     let transactionResult;
     try {
       transactionResult = await db.$transaction(async (tx) => {
+        const productIds = [...new Set(input.items.map((item) => item.productId))];
+        const products = await tx.product.findMany({
+          where: { id: { in: productIds }, isAvailable: true },
+          include: { optionGroups: { include: { options: { where: { isAvailable: true } } } } },
+        });
+        if (products.length !== productIds.length) throw new Error("部分商品已下架，请刷新购物车");
+
+        const snapshots = input.items.map((line) => {
+          const product = products.find((entry) => entry.id === line.productId)!;
+          if (product.channel !== input.kind) throw new Error("餐饮与商店商品不能混合结算");
+          const selected = product.optionGroups.flatMap((group) => {
+            const options = group.options.filter((option) => line.optionIds.includes(option.id));
+            if (group.isRequired && options.length < group.minSelect) throw new Error(`请选择${group.name}`);
+            if (options.length > group.maxSelect) throw new Error(`${group.name}选择数量超出限制`);
+            return options;
+          });
+          const allowedIds = new Set(selected.map((option) => option.id));
+          if (line.optionIds.some((id) => !allowedIds.has(id))) throw new Error("商品规格已变化，请重新选择");
+          const unitPrice = product.basePrice + selected.reduce((sum, option) => sum + option.priceDelta, 0);
+          return {
+            product, quantity: line.quantity, unitPrice, subtotal: unitPrice * line.quantity,
+            options: selected.map((option) => ({ id: option.id, name: option.name, priceDelta: option.priceDelta })),
+          };
+        });
+        const totalAmount = snapshots.reduce((sum, item) => sum + item.subtotal, 0);
+        const now = new Date();
+
         for (const item of snapshots) {
           if (item.product.stock !== null) {
             const updated = await tx.product.updateMany({
@@ -128,10 +135,10 @@ export async function checkoutForUser(userId: string, raw: unknown): Promise<Che
             reference: `PURCHASE:${input.token}`, orderId: order.id,
           } });
         }
-        return { order, split };
-      });
+        return { order, split, totalAmount };
+      }, { isolationLevel: "Serializable" });
     } catch (transactionError) {
-      const winningOrder = await db.order.findUnique({ where: { checkoutToken: input.token }, include: { payment: true } });
+      const winningOrder = await db.order.findUnique({ where: { checkoutToken: input.token }, select: existingOrderSelect });
       if (winningOrder) return unchanged(resultFromExistingOrder(winningOrder, userId));
       throw transactionError;
     }
@@ -140,7 +147,7 @@ export async function checkoutForUser(userId: string, raw: unknown): Promise<Che
       created: true,
       result: {
         ok: true, orderId: transactionResult.order.id, orderNumber: transactionResult.order.orderNumber,
-        totalAmount, giftCardAmount: transactionResult.split.giftCardAmount,
+        totalAmount: transactionResult.totalAmount, giftCardAmount: transactionResult.split.giftCardAmount,
         externalAmount: transactionResult.split.externalAmount, demo: false,
       },
     };

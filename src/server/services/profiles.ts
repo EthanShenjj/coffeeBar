@@ -60,5 +60,5 @@ export function updateProfileForUser(userId: string, input: { name: string; phon
       create: { phone: input.phone || null, birthday: input.birthday ? new Date(input.birthday) : null },
       update: { phone: input.phone || null, birthday: input.birthday ? new Date(input.birthday) : null },
     } } },
-  });
+  }).then(() => undefined);
 }

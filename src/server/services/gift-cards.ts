@@ -1,6 +1,7 @@
+import type { GiftCardSummary } from "@coffeebar/contracts";
 import { getDb } from "@/lib/db";
 
-export async function getGiftCardSummaryForUser(userId: string, limit = 20) {
+export async function getGiftCardSummaryForUser(userId: string, limit = 20): Promise<GiftCardSummary> {
   const account = await getDb().giftCardAccount.findUnique({
     where: { userId },
     select: {
@@ -14,5 +15,16 @@ export async function getGiftCardSummaryForUser(userId: string, limit = 20) {
       },
     },
   });
-  return { balance: account?.balance ?? 0, transactions: account?.transactions ?? [], persistent: true };
+  return {
+    balance: account?.balance ?? 0,
+    persistent: true,
+    transactions: (account?.transactions ?? []).map((transaction) => ({
+      id: transaction.id,
+      type: transaction.type,
+      amount: transaction.amount,
+      reference: transaction.reference,
+      orderNumber: transaction.order?.orderNumber ?? null,
+      createdAt: transaction.createdAt.toISOString(),
+    })),
+  };
 }

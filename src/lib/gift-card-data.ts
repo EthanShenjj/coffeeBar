@@ -13,8 +13,8 @@ export async function getGiftCardSummary(limit = 20) {
       id: transaction.id,
       type: transaction.type,
       amount: transaction.amount,
-      createdAt: transaction.createdAt,
-      order: transaction.order,
+      createdAt: new Date(transaction.createdAt),
+      order: transaction.orderNumber ? { orderNumber: transaction.orderNumber } : null,
     })),
   };
 }

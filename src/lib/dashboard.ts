@@ -44,7 +44,8 @@ export async function getOrders() {
     { id: "demo-1", orderNumber: "CB2607121842A9F1", status: "COMPLETED", totalAmount: 6800, createdAt: new Date("2026-07-12T10:42:00"), items: [{ productName: "黑白拿铁", quantity: 1 }, { productName: "原味巴斯克", quantity: 1 }] },
     { id: "demo-2", orderNumber: "CB2607061021C3D8", status: "READY", totalAmount: 3600, createdAt: new Date("2026-07-06T02:21:00"), items: [{ productName: "青提冷萃", quantity: 1 }] },
   ];
-  return getOrdersForUser(session.user.id);
+  const orders = await getOrdersForUser(session.user.id);
+  return orders.map((order) => ({ ...order, createdAt: new Date(order.createdAt) }));
 }
 
 export async function getAnnouncements() {
@@ -53,8 +54,7 @@ export async function getAnnouncements() {
   const rows = await getAnnouncementsForUser(session?.user.id ?? null);
   return rows.map((item) => ({
     id: item.id, title: item.title, summary: item.summary,
-    date: (item.publishedAt ?? item.createdAt).toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" }),
-    read: Array.isArray(item.receipts) && item.receipts.length > 0,
+    date: item.date.slice(5).replace("-", "."), read: item.read,
   }));
 }
 

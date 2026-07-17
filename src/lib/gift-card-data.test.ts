@@ -18,8 +18,8 @@ describe("getGiftCardSummary Web projection", () => {
         type: "RECHARGE",
         amount: 10000,
         reference: "RECHARGE:private-token",
-        createdAt,
-        order: null,
+        createdAt: createdAt.toISOString(),
+        orderNumber: null,
       }],
     });
 
