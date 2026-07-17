@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+:root { color: #151515; background: #f7f3ed; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+a { color: inherit; }
+.app-shell { min-height: 100vh; padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
+header { padding: calc(1rem + env(safe-area-inset-top)) 1.25rem 1rem; }
+.brand { display: inline-grid; place-items: center; width: 3rem; height: 3rem; border-radius: 999px; color: white; background: #111; font-weight: 800; text-decoration: none; }
+.page, main { padding: 2rem 1.25rem; max-width: 48rem; margin: 0 auto; }
+h1 { margin: 0 0 1rem; font-size: clamp(2rem, 9vw, 4rem); line-height: .95; letter-spacing: -.05em; }
+nav { position: fixed; inset: auto .75rem calc(.75rem + env(safe-area-inset-bottom)); display: flex; justify-content: space-around; gap: .25rem; padding: .9rem; border-radius: 1.25rem; background: #111; color: white; }
+nav a { padding: .5rem; text-decoration: none; }
+.page form { display: grid; gap: 1rem; margin-block: 2rem; }
+.page label { display: grid; gap: .4rem; font-weight: 650; }
+.page input { width: 100%; border: 1px solid #aaa; border-radius: .75rem; background: white; padding: .8rem; font: inherit; }
+.page button { border: 0; border-radius: 999px; padding: .9rem 1.25rem; color: white; background: #111; font: inherit; font-weight: 700; }
+.page button:disabled { opacity: .45; }
+.skip-link { position: absolute; transform: translateY(-200%); }
+.skip-link:focus { transform: none; z-index: 2; background: white; padding: .75rem; }
