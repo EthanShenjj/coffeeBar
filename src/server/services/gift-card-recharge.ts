@@ -2,7 +2,7 @@ import { getDb } from "@/lib/db";
 import { creditGiftCard } from "@/lib/gift-card-service";
 import { giftCardRechargeSchema } from "@/lib/validation";
 
-export type GiftCardRechargeResult = { ok: true; balance: number } | { ok: false; message: string };
+export type GiftCardRechargeResult = { ok: true; balance: number; idempotent: boolean } | { ok: false; message: string };
 
 export async function rechargeGiftCardForUser(userId: string, raw: unknown): Promise<GiftCardRechargeResult> {
   const parsed = giftCardRechargeSchema.safeParse(raw);
@@ -13,7 +13,7 @@ export async function rechargeGiftCardForUser(userId: string, raw: unknown): Pro
       amount: parsed.data.amount,
       reference: `RECHARGE:${parsed.data.token}`,
     }));
-    return { ok: true, balance: result.balance };
+    return { ok: true, balance: result.balance, idempotent: result.duplicate };
   } catch (error) {
     return { ok: false, message: error instanceof Error && error.message === "充值令牌不可用" ? error.message : "充值失败，请稍后重试" };
   }

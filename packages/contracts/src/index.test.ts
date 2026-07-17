@@ -19,6 +19,8 @@ import {
   profileDashboardSchema,
   pushTokenRegistrationResultSchema,
   pushTokenRegistrationSchema,
+  giftCardRechargeInputSchema,
+  giftCardRechargeResultSchema,
 } from "./index";
 
 const product = { id: "latte", slug: "latte", name: "拿铁", subtitle: "经典", description: "奶咖", channel: "MENU", category: "咖啡", price: 6800, imageUrl: "https://coffeebar.local/latte.png", stock: null, isAvailable: true, optionGroups: [{ id: "milk", name: "奶", required: true, maxSelect: 1, options: [{ id: "oat", name: "燕麦奶", priceDelta: 300, isDefault: false }] }] };
@@ -48,7 +50,7 @@ describe("shared API contracts", () => {
   });
 
   it("accepts representative ISO-date wire objects with integer-cent currency", () => {
-    expect(appConfigSchema.safeParse({ supportEmail: "hello@coffeebar.local", termsUrl: "https://coffeebar.local/terms", privacyUrl: "https://coffeebar.local/privacy", updatedAt: "2026-07-17T10:00:00.000Z" }).success).toBe(true);
+    expect(appConfigSchema.safeParse({ minimumIosVersion: "1.0.0", maintenance: false, privacyUrl: "https://coffeebar.local/privacy", supportUrl: "https://coffeebar.local/support", apiVersion: "v1" }).success).toBe(true);
     expect(announcementDetailSchema.safeParse({ id: "a1", title: "夏日上新", summary: "冷萃回归", content: "欢迎品尝", coverUrl: null, publishedAt: "2026-07-17T10:00:00.000Z", createdAt: "2026-07-16T10:00:00.000Z", read: false }).success).toBe(true);
     expect(giftCardSummarySchema.safeParse({ balance: 12_800, persistent: true, transactions: [{ id: "t1", type: "RECHARGE", amount: 10_000, reference: "RECHARGE:1", orderNumber: null, createdAt: "2026-07-17T10:00:00.000Z" }] }).success).toBe(true);
     expect(orderDetailSchema.safeParse(orderDetail).success).toBe(true);
@@ -91,10 +93,18 @@ describe("shared API contracts", () => {
 
   it("validates API success and failure envelopes", () => {
     const successSchema = apiSuccessSchema(productViewSchema);
-    expect(successSchema.safeParse({ ok: true, data: product }).success).toBe(true);
-    expect(successSchema.safeParse({ ok: false, data: product }).success).toBe(false);
-    expect(apiFailureSchema.safeParse({ ok: false, error: { code: "NOT_FOUND", message: "商品不存在" } }).success).toBe(true);
-    expect(apiFailureSchema.safeParse({ ok: false, error: { code: "RATE_LIMITED", message: "稍后重试" } }).success).toBe(false);
+    expect(successSchema.safeParse({ data: product }).success).toBe(true);
+    expect(successSchema.safeParse({ ok: true, data: product }).success).toBe(false);
+    expect(apiFailureSchema.safeParse({ error: { code: "NOT_FOUND", message: "商品不存在", fieldErrors: { id: ["不存在"] } } }).success).toBe(true);
+    expect(apiFailureSchema.safeParse({ error: { code: "RATE_LIMITED", message: "稍后重试" } }).success).toBe(false);
+  });
+
+  it("defines the exact gift-card recharge request and response", () => {
+    const input = { token: "00000000-0000-4000-8000-000000000001", amount: 10_000 };
+    expect(giftCardRechargeInputSchema.safeParse(input).success).toBe(true);
+    expect(giftCardRechargeInputSchema.safeParse({ ...input, amount: 15_000 }).success).toBe(false);
+    expect(giftCardRechargeResultSchema.safeParse({ balance: 20_000, idempotent: true }).success).toBe(true);
+    expect(giftCardRechargeResultSchema.safeParse({ ok: true, balance: 20_000 }).success).toBe(false);
   });
 
   it("validates cart lines and checkout results", () => {

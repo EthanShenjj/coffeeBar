@@ -28,12 +28,12 @@ export async function getAnnouncementsForUser(userId: string | null): Promise<An
   }));
 }
 
-export async function getAnnouncementForUser(userId: string, announcementId: string): Promise<AnnouncementDetail | null> {
+export async function getAnnouncementForUser(userId: string | null, announcementId: string): Promise<AnnouncementDetail | null> {
   const row = await getDb().announcement.findFirst({
     where: { id: announcementId, ...publishedWhere() },
     select: {
       id: true, title: true, summary: true, content: true, coverUrl: true, publishedAt: true, createdAt: true,
-      receipts: { where: { userId }, select: { readAt: true } },
+      receipts: userId ? { where: { userId }, select: { readAt: true } } : false,
     },
   });
   if (!row) return null;
@@ -45,7 +45,7 @@ export async function getAnnouncementForUser(userId: string, announcementId: str
     coverUrl: row.coverUrl,
     publishedAt: (row.publishedAt ?? row.createdAt).toISOString(),
     createdAt: row.createdAt.toISOString(),
-    read: row.receipts.length > 0,
+    read: Array.isArray(row.receipts) && row.receipts.length > 0,
   };
 }
 

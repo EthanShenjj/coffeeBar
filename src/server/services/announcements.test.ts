@@ -17,7 +17,7 @@ vi.mock("@/lib/db", () => ({
   }),
 }));
 
-import { markAnnouncementReadForUser } from "@/server/services/announcements";
+import { getAnnouncementForUser, markAnnouncementReadForUser } from "@/server/services/announcements";
 
 describe("markAnnouncementReadForUser", () => {
   beforeEach(() => {
@@ -56,5 +56,21 @@ describe("markAnnouncementReadForUser", () => {
     await expect(markAnnouncementReadForUser("user-1", "announcement-1")).rejects.toMatchObject({
       name: "ServiceNotFoundError", code: "NOT_FOUND", message: "消息不存在",
     });
+  });
+});
+
+describe("getAnnouncementForUser", () => {
+  it("supports public detail reads without querying user receipts", async () => {
+    mocks.outerAnnouncementFindFirst.mockResolvedValueOnce({
+      id: "announcement-1", title: "News", summary: "Hello", content: "Body", coverUrl: null,
+      publishedAt: new Date("2026-07-17T08:00:00.000Z"), createdAt: new Date("2026-07-17T07:00:00.000Z"),
+    });
+
+    await expect(getAnnouncementForUser(null, "announcement-1")).resolves.toMatchObject({
+      id: "announcement-1", read: false,
+    });
+    expect(mocks.outerAnnouncementFindFirst).toHaveBeenCalledWith(expect.objectContaining({
+      select: expect.objectContaining({ receipts: false }),
+    }));
   });
 });

@@ -19,16 +19,16 @@ export const apiErrorCodeSchema = z.enum([
 ]);
 export type ApiErrorCode = z.output<typeof apiErrorCodeSchema>;
 
-export const apiSuccessSchema = <T extends z.ZodType>(data: T) => z.object({
-  ok: z.literal(true),
-  data,
-});
+export const apiSuccessSchema = <T extends z.ZodType>(data: T) => z.object({ data }).strict();
 export type ApiSuccess<T> = z.output<ReturnType<typeof apiSuccessSchema<z.ZodType<T>>>>;
 
 export const apiFailureSchema = z.object({
-  ok: z.literal(false),
-  error: z.object({ code: apiErrorCodeSchema, message: z.string() }),
-});
+  error: z.object({
+    code: apiErrorCodeSchema,
+    message: z.string(),
+    fieldErrors: z.record(z.string(), z.array(z.string())).optional(),
+  }).strict(),
+}).strict();
 export type ApiFailure = z.output<typeof apiFailureSchema>;
 
 export const cartKindSchema = z.enum(["MENU", "SHOP"]);
@@ -106,12 +106,27 @@ export const checkoutResultSchema = z.discriminatedUnion("ok", [
 export type CheckoutResult = z.output<typeof checkoutResultSchema>;
 
 export const appConfigSchema = z.object({
-  supportEmail: z.string().email(),
-  termsUrl: z.string().url(),
+  minimumIosVersion: z.string().regex(/^\d+\.\d+\.\d+$/),
+  maintenance: z.boolean(),
   privacyUrl: z.string().url(),
-  updatedAt: isoDateTimeSchema,
-});
+  supportUrl: z.string().url(),
+  apiVersion: z.literal("v1"),
+}).strict();
 export type AppConfig = z.output<typeof appConfigSchema>;
+
+export const giftCardRechargeInputSchema = z.object({
+  token: z.string().uuid(),
+  amount: z.union(
+    [z.literal(10_000), z.literal(20_000), z.literal(30_000), z.literal(50_000)],
+    { error: "请选择有效的充值金额" },
+  ),
+}).strict();
+export type GiftCardRechargeInput = z.output<typeof giftCardRechargeInputSchema>;
+export const giftCardRechargeResultSchema = z.object({
+  balance: nonnegativeCentsSchema,
+  idempotent: z.boolean(),
+}).strict();
+export type GiftCardRechargeResult = z.output<typeof giftCardRechargeResultSchema>;
 
 export const announcementSummarySchema = z.object({
   id: z.string(), title: z.string(), summary: z.string(), date: isoDateSchema, read: z.boolean(),
