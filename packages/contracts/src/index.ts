@@ -77,10 +77,11 @@ export const cartLineSchema = z.object({
 });
 export type CartLine = z.output<typeof cartLineSchema>;
 
+export const CHECKOUT_MAX_OPTION_IDS = 8;
 export const checkoutItemSchema = z.object({
   productId: z.string().min(1),
   quantity: z.number().int().min(1).max(20),
-  optionIds: z.array(z.string()).max(8),
+  optionIds: z.array(z.string()).max(CHECKOUT_MAX_OPTION_IDS),
 });
 export const CHECKOUT_MAX_ITEM_LINES = 30;
 export const checkoutInputSchema = z.object({

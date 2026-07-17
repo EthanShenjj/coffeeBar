@@ -1,4 +1,4 @@
-import { CHECKOUT_MAX_ITEM_LINES, cartLineSchema, type CartKind, type CartLine, type ProductView } from "@coffeebar/contracts";
+import { CHECKOUT_MAX_ITEM_LINES, CHECKOUT_MAX_OPTION_IDS, cartLineSchema, type CartKind, type CartLine, type ProductView } from "@coffeebar/contracts";
 import { z } from "zod";
 import { createStore } from "zustand/vanilla";
 
@@ -13,6 +13,7 @@ const persistedCartSchema = z.object({
 
 function normalizeOptions(product: ProductView, inputOptionIds: string[]) {
   const optionIds = [...new Set(inputOptionIds)].sort();
+  if (optionIds.length > CHECKOUT_MAX_OPTION_IDS) throw new Error("规格数量超过结算上限");
   const optionGroupsByOption = new Map<string, (typeof product.optionGroups)[number]>();
   for (const group of product.optionGroups) {
     for (const option of group.options) {

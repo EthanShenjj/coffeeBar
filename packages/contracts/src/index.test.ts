@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   CHECKOUT_MAX_ITEM_LINES,
+  CHECKOUT_MAX_OPTION_IDS,
   apiErrorCodeSchema,
   apiFailureSchema,
   apiSuccessSchema,
@@ -50,6 +51,7 @@ describe("shared API contracts", () => {
     expectTypeOf<CheckoutRequestInput>().toMatchTypeOf<{ useGiftCard?: boolean }>();
     expect(checkoutInputSchema.safeParse({ ...valid, pickupAt: "tomorrow" }).success).toBe(false);
     expect(CHECKOUT_MAX_ITEM_LINES).toBe(30);
+    expect(CHECKOUT_MAX_OPTION_IDS).toBe(8);
     expect(checkoutInputSchema.safeParse({ ...valid, items: Array.from({ length: 31 }, () => valid.items[0]) }).success).toBe(false);
   });
 

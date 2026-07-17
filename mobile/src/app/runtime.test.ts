@@ -98,6 +98,9 @@ describe("runtime 401 session invalidation", () => {
     const navigate = vi.fn();
     const queryClient = new QueryClient();
     queryClient.setQueryData(["orders"], [{ id: "old-private-data" }]);
+    queryClient.setQueryData(["dashboard"], { user: "old" });
+    queryClient.setQueryData(["gift-card"], { balance: 100 });
+    window.sessionStorage.setItem("coffeebar.intended-route", "/previous");
     const runtime = createMobileRuntime({ apiBaseUrl: "https://api.example.com", tokenStore, fetcher, navigate, queryClient, deviceId: "phone" });
     await runtime.auth.restore();
     const rejectedRequest = runtime.api.get("/api/v1/me/orders");
@@ -108,7 +111,10 @@ describe("runtime 401 session invalidation", () => {
     await Promise.all([newLogin, expect(rejectedRequest).rejects.toMatchObject({ code: "UNAUTHORIZED" })]);
     expect(storedToken).toBe("new-token");
     expect(runtime.auth.getSnapshot().status).toBe("authenticated");
-    expect(queryClient.getQueryData(["orders"])).toEqual([{ id: "old-private-data" }]);
+    expect(queryClient.getQueryData(["orders"])).toBeUndefined();
+    expect(queryClient.getQueryData(["dashboard"])).toBeUndefined();
+    expect(queryClient.getQueryData(["gift-card"])).toBeUndefined();
+    expect(window.sessionStorage.getItem("coffeebar.intended-route")).toBe("/previous");
     expect(navigate).not.toHaveBeenCalled();
   });
 });

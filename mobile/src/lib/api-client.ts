@@ -42,11 +42,12 @@ export function createApiClient(options: ClientOptions) {
     if (!task) {
       task = (async () => {
         const invalidation = await options.invalidateSession(usedToken);
-        if (invalidation === "invalidated") {
-          saveIntendedRoute(intendedPath);
-          try {
-            await options.clearSensitiveSessionQueries();
-          } finally {
+        if (invalidation === "stale") return;
+        try {
+          await options.clearSensitiveSessionQueries();
+        } finally {
+          if (invalidation === "invalidated") {
+            saveIntendedRoute(intendedPath);
             options.navigate?.("/login", { replace: true });
           }
         }

@@ -1,4 +1,4 @@
-import type { ProductView } from "@coffeebar/contracts";
+import { CHECKOUT_MAX_OPTION_IDS, checkoutItemSchema, type ProductView } from "@coffeebar/contracts";
 import { createCartStore, restoreCartState } from "./cart-store";
 
 const coffee: ProductView = {
@@ -104,5 +104,22 @@ describe("persisted dual carts", () => {
     expect(() => menu.getState().addItem(ambiguous, ["hot"])).toThrow("重复");
     const raw = JSON.stringify({ version: 1, kind: "MENU", items: [{ lineId: "bad", product: ambiguous, quantity: 1, optionIds: ["hot"] }] });
     expect(restoreCartState(raw, "MENU").items).toEqual([]);
+  });
+
+  it("keeps every accepted cart line within the shared checkout option limit", () => {
+    const manyOptions: ProductView = { ...mug, channel: "MENU", optionGroups: Array.from({ length: 9 }, (_, index) => ({
+      id: `group-${index}`, name: `Group ${index}`, required: false, maxSelect: 1,
+      options: [{ id: `option-${index}`, name: `Option ${index}`, priceDelta: 0 }],
+    })) };
+    const selected = manyOptions.optionGroups.map((group) => group.options[0]!.id);
+    expect(CHECKOUT_MAX_OPTION_IDS).toBe(8);
+    const menu = createCartStore("MENU", { storage: window.localStorage });
+    expect(() => menu.getState().addItem(manyOptions, selected)).toThrow("规格数量");
+    const raw = JSON.stringify({ version: 1, kind: "MENU", items: [{ lineId: "too-many", product: manyOptions, quantity: 1, optionIds: selected }] });
+    expect(restoreCartState(raw, "MENU").items).toEqual([]);
+
+    const acceptedId = menu.getState().addItem(coffee, ["hot"]);
+    const accepted = menu.getState().items.find((line) => line.lineId === acceptedId)!;
+    expect(checkoutItemSchema.safeParse({ productId: accepted.product.id, quantity: accepted.quantity, optionIds: accepted.optionIds }).success).toBe(true);
   });
 });
