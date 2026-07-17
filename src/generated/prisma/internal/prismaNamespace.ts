@@ -385,6 +385,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   User: 'User',
+  DevicePushToken: 'DevicePushToken',
   Session: 'Session',
   Account: 'Account',
   Verification: 'Verification',
@@ -416,7 +417,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "session" | "account" | "verification" | "userProfile" | "product" | "productOptionGroup" | "productOption" | "cart" | "cartItem" | "order" | "orderItem" | "payment" | "giftCardAccount" | "giftCardTransaction" | "announcement" | "messageReceipt"
+    modelProps: "user" | "devicePushToken" | "session" | "account" | "verification" | "userProfile" | "product" | "productOptionGroup" | "productOption" | "cart" | "cartItem" | "order" | "orderItem" | "payment" | "giftCardAccount" | "giftCardTransaction" | "announcement" | "messageReceipt"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -491,6 +492,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.UserCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.UserCountAggregateOutputType> | number
+        }
+      }
+    }
+    DevicePushToken: {
+      payload: Prisma.$DevicePushTokenPayload<ExtArgs>
+      fields: Prisma.DevicePushTokenFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DevicePushTokenFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DevicePushTokenPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DevicePushTokenFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DevicePushTokenPayload>
+        }
+        findFirst: {
+          args: Prisma.DevicePushTokenFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DevicePushTokenPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DevicePushTokenFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DevicePushTokenPayload>
+        }
+        findMany: {
+          args: Prisma.DevicePushTokenFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DevicePushTokenPayload>[]
+        }
+        create: {
+          args: Prisma.DevicePushTokenCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DevicePushTokenPayload>
+        }
+        createMany: {
+          args: Prisma.DevicePushTokenCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DevicePushTokenCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DevicePushTokenPayload>[]
+        }
+        delete: {
+          args: Prisma.DevicePushTokenDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DevicePushTokenPayload>
+        }
+        update: {
+          args: Prisma.DevicePushTokenUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DevicePushTokenPayload>
+        }
+        deleteMany: {
+          args: Prisma.DevicePushTokenDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DevicePushTokenUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DevicePushTokenUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DevicePushTokenPayload>[]
+        }
+        upsert: {
+          args: Prisma.DevicePushTokenUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DevicePushTokenPayload>
+        }
+        aggregate: {
+          args: Prisma.DevicePushTokenAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDevicePushToken>
+        }
+        groupBy: {
+          args: Prisma.DevicePushTokenGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DevicePushTokenGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DevicePushTokenCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DevicePushTokenCountAggregateOutputType> | number
         }
       }
     }
@@ -1731,6 +1806,22 @@ export const UserScalarFieldEnum = {
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
+export const DevicePushTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  deviceId: 'deviceId',
+  token: 'token',
+  environment: 'environment',
+  disabledAt: 'disabledAt',
+  disabledReason: 'disabledReason',
+  lastSeenAt: 'lastSeenAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DevicePushTokenScalarFieldEnum = (typeof DevicePushTokenScalarFieldEnum)[keyof typeof DevicePushTokenScalarFieldEnum]
+
+
 export const SessionScalarFieldEnum = {
   id: 'id',
   expiresAt: 'expiresAt',
@@ -2007,14 +2098,14 @@ export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof Json
  * Reference to a field of type 'String'
  */
 export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String'>
-    
+
 
 
 /**
  * Reference to a field of type 'String[]'
  */
 export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String[]'>
-    
+
 
 
 /**
@@ -2050,6 +2141,20 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  */
 export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
     
+
+
+/**
+ * Reference to a field of type 'PushEnvironment'
+ */
+export type EnumPushEnvironmentFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PushEnvironment'>
+
+
+
+/**
+ * Reference to a field of type 'PushEnvironment[]'
+ */
+export type ListEnumPushEnvironmentFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PushEnvironment[]'>
+
 
 
 /**
@@ -2288,6 +2393,7 @@ export type PrismaClientOptions = ({
 }
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
+  devicePushToken?: Prisma.DevicePushTokenOmit
   session?: Prisma.SessionOmit
   account?: Prisma.AccountOmit
   verification?: Prisma.VerificationOmit
@@ -2366,4 +2472,3 @@ export type PrismaAction =
  * `PrismaClient` proxy available in interactive transactions.
  */
 export type TransactionClient = Omit<DefaultPrismaClient, runtime.ITXClientDenyList>
-

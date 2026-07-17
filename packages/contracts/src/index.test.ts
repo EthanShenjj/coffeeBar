@@ -19,6 +19,7 @@ import {
   profileDashboardSchema,
   pushTokenRegistrationResultSchema,
   pushTokenRegistrationSchema,
+  pushTokenRemovalResultSchema,
   giftCardRechargeInputSchema,
   giftCardRechargeResultSchema,
 } from "./index";
@@ -129,11 +130,15 @@ describe("shared API contracts", () => {
   });
 
   it("validates push-token registration payloads and results", () => {
-    expect(pushTokenRegistrationSchema.safeParse({ token: "apns-token", platform: "IOS", deviceId: "iphone-1" }).success).toBe(true);
-    expect(pushTokenRegistrationSchema.safeParse({ token: "", platform: "IOS" }).success).toBe(false);
-    expect(pushTokenRegistrationSchema.safeParse({ token: "apns-token", platform: "MACOS" }).success).toBe(false);
+    expect(pushTokenRegistrationSchema.safeParse({ token: "a".repeat(64), deviceId: "iphone-1", environment: "DEVELOPMENT" }).success).toBe(true);
+    expect(pushTokenRegistrationSchema.safeParse({ token: "", deviceId: "iphone-1", environment: "DEVELOPMENT" }).success).toBe(false);
+    expect(pushTokenRegistrationSchema.safeParse({ token: "not-an-apns-token", deviceId: "iphone-1", environment: "DEVELOPMENT" }).success).toBe(false);
+    expect(pushTokenRegistrationSchema.safeParse({ token: "apns-token", deviceId: "", environment: "DEVELOPMENT" }).success).toBe(false);
+    expect(pushTokenRegistrationSchema.safeParse({ token: "apns-token", deviceId: "iphone-1", environment: "STAGING" }).success).toBe(false);
+    expect(pushTokenRegistrationSchema.safeParse({ token: "apns-token", deviceId: "iphone-1", environment: "DEVELOPMENT", extra: true }).success).toBe(false);
     expect(pushTokenRegistrationResultSchema.safeParse({ registered: true, updatedAt: "2026-07-17T10:00:00.000Z" }).success).toBe(true);
     expect(pushTokenRegistrationResultSchema.safeParse({ registered: true, updatedAt: "today" }).success).toBe(false);
+    expect(pushTokenRemovalResultSchema.safeParse({ removed: true }).success).toBe(true);
   });
 
   it("allows signed deltas but rejects negative balances, prices, stock, and totals", () => {

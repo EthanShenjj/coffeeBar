@@ -140,6 +140,13 @@ export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedDateTimeFilter<$PrismaModel>
 }
 
+export type EnumPushEnvironmentFilter<$PrismaModel = never> = {
+  equals?: $Enums.PushEnvironment | Prisma.EnumPushEnvironmentFieldRefInput<$PrismaModel>
+  in?: $Enums.PushEnvironment[] | Prisma.ListEnumPushEnvironmentFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PushEnvironment[] | Prisma.ListEnumPushEnvironmentFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPushEnvironmentFilter<$PrismaModel> | $Enums.PushEnvironment
+}
+
 export type DateTimeNullableFilter<$PrismaModel = never> = {
   equals?: Date | string | Prisma.DateTimeFieldRefInput<$PrismaModel> | null
   in?: Date[] | string[] | Prisma.ListDateTimeFieldRefInput<$PrismaModel> | null
@@ -149,6 +156,16 @@ export type DateTimeNullableFilter<$PrismaModel = never> = {
   gt?: Date | string | Prisma.DateTimeFieldRefInput<$PrismaModel>
   gte?: Date | string | Prisma.DateTimeFieldRefInput<$PrismaModel>
   not?: Prisma.NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+}
+
+export type EnumPushEnvironmentWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PushEnvironment | Prisma.EnumPushEnvironmentFieldRefInput<$PrismaModel>
+  in?: $Enums.PushEnvironment[] | Prisma.ListEnumPushEnvironmentFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PushEnvironment[] | Prisma.ListEnumPushEnvironmentFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPushEnvironmentWithAggregatesFilter<$PrismaModel> | $Enums.PushEnvironment
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPushEnvironmentFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPushEnvironmentFilter<$PrismaModel>
 }
 
 export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -511,6 +528,13 @@ export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedDateTimeFilter<$PrismaModel>
 }
 
+export type NestedEnumPushEnvironmentFilter<$PrismaModel = never> = {
+  equals?: $Enums.PushEnvironment | Prisma.EnumPushEnvironmentFieldRefInput<$PrismaModel>
+  in?: $Enums.PushEnvironment[] | Prisma.ListEnumPushEnvironmentFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PushEnvironment[] | Prisma.ListEnumPushEnvironmentFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPushEnvironmentFilter<$PrismaModel> | $Enums.PushEnvironment
+}
+
 export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
   equals?: Date | string | Prisma.DateTimeFieldRefInput<$PrismaModel> | null
   in?: Date[] | string[] | Prisma.ListDateTimeFieldRefInput<$PrismaModel> | null
@@ -520,6 +544,16 @@ export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
   gt?: Date | string | Prisma.DateTimeFieldRefInput<$PrismaModel>
   gte?: Date | string | Prisma.DateTimeFieldRefInput<$PrismaModel>
   not?: Prisma.NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+}
+
+export type NestedEnumPushEnvironmentWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PushEnvironment | Prisma.EnumPushEnvironmentFieldRefInput<$PrismaModel>
+  in?: $Enums.PushEnvironment[] | Prisma.ListEnumPushEnvironmentFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PushEnvironment[] | Prisma.ListEnumPushEnvironmentFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPushEnvironmentWithAggregatesFilter<$PrismaModel> | $Enums.PushEnvironment
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPushEnvironmentFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPushEnvironmentFilter<$PrismaModel>
 }
 
 export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {

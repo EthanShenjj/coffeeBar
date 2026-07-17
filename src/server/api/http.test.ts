@@ -34,7 +34,7 @@ describe("customer API HTTP helpers", () => {
     expect(result.allowed).toBe(true);
     expect(result.headers.get("access-control-allow-origin")).toBe(origin);
     expect(result.headers.get("vary")).toBe("Origin");
-    expect(result.headers.get("access-control-allow-methods")).toBe("GET, POST, OPTIONS");
+    expect(result.headers.get("access-control-allow-methods")).toBe("GET, POST, PUT, DELETE, OPTIONS");
     expect(result.headers.get("access-control-allow-headers")).toBe("Authorization, Content-Type");
   });
 

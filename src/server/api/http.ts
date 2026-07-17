@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ApiErrorCode } from "@coffeebar/contracts";
 import { buildTrustedOrigins, requireUserFromHeaders, UnauthorizedError } from "@/lib/auth";
 import { hasDatabase } from "@/lib/db";
-import { ServiceNotFoundError } from "@/server/services/errors";
+import { ServiceConflictError, ServiceNotFoundError } from "@/server/services/errors";
 
 export type ApiEnvironment = {
   NEXT_PUBLIC_APP_URL?: string;
@@ -84,7 +84,7 @@ export function corsHeadersForRequest(
   const allowed = origin === null || buildTrustedOrigins(env).includes(origin);
   const headers = new Headers({
     Vary: "Origin",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
   });
   if (origin && allowed) headers.set("Access-Control-Allow-Origin", origin);
@@ -118,6 +118,9 @@ export function mapApiError(error: unknown): MappedApiError {
     return { status: 404, error: { code: "NOT_FOUND", message: error.message } };
   }
   if (error instanceof ApiConflictError) {
+    return { status: 409, error: { code: "CONFLICT", message: error.message } };
+  }
+  if (error instanceof ServiceConflictError) {
     return { status: 409, error: { code: "CONFLICT", message: error.message } };
   }
   if (error instanceof z.ZodError) {

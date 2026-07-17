@@ -5,8 +5,27 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { PRODUCT_CATALOG_CACHE_TAG } from "@/lib/cache-tags";
 import { getDb } from "@/lib/db";
+import { notifyOrderStatus } from "@/server/push/order-notifications";
 
-export async function advanceOrder(orderId: string, status: "PREPARING" | "READY" | "COMPLETED") { await requireAdmin(); await getDb().order.update({ where: { id: orderId }, data: { status } }); revalidatePath("/admin"); }
+export async function advanceOrder(orderId: string, status: "PREPARING" | "READY" | "COMPLETED") {
+  await requireAdmin();
+  const order = await getDb().order.update({
+    where: { id: orderId },
+    data: { status },
+    select: { id: true, userId: true, orderNumber: true, status: true },
+  });
+  try {
+    await notifyOrderStatus({
+      userId: order.userId,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status as typeof status,
+    });
+  } catch {
+    // Order fulfillment must not be rolled back by an optional notification.
+  }
+  revalidatePath("/admin");
+}
 export async function toggleProduct(productId: string, isAvailable: boolean) { await requireAdmin(); await getDb().product.update({ where: { id: productId }, data: { isAvailable } }); updateTag(PRODUCT_CATALOG_CACHE_TAG); revalidatePath("/admin"); revalidatePath("/menu"); revalidatePath("/shop"); }
 
 const productSchema = z.object({ id: z.string(), name: z.string().min(2).max(80), description: z.string().min(2).max(500), basePrice: z.number().int().min(100), stock: z.number().int().min(0).nullable(), imageUrl: z.string().url() });

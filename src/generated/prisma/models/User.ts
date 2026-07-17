@@ -213,6 +213,7 @@ export type UserWhereInput = {
   orders?: Prisma.OrderListRelationFilter
   messageReads?: Prisma.MessageReceiptListRelationFilter
   giftCardAccount?: Prisma.XOR<Prisma.GiftCardAccountNullableScalarRelationFilter, Prisma.GiftCardAccountWhereInput> | null
+  pushTokens?: Prisma.DevicePushTokenListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -231,6 +232,7 @@ export type UserOrderByWithRelationInput = {
   orders?: Prisma.OrderOrderByRelationAggregateInput
   messageReads?: Prisma.MessageReceiptOrderByRelationAggregateInput
   giftCardAccount?: Prisma.GiftCardAccountOrderByWithRelationInput
+  pushTokens?: Prisma.DevicePushTokenOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -252,6 +254,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   orders?: Prisma.OrderListRelationFilter
   messageReads?: Prisma.MessageReceiptListRelationFilter
   giftCardAccount?: Prisma.XOR<Prisma.GiftCardAccountNullableScalarRelationFilter, Prisma.GiftCardAccountWhereInput> | null
+  pushTokens?: Prisma.DevicePushTokenListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -298,6 +301,7 @@ export type UserCreateInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -316,6 +320,7 @@ export type UserUncheckedCreateInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -334,6 +339,7 @@ export type UserUpdateInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -352,6 +358,7 @@ export type UserUncheckedUpdateInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -443,6 +450,20 @@ export type EnumUserRoleFieldUpdateOperationsInput = {
 
 export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
+}
+
+export type UserCreateNestedOneWithoutPushTokensInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutPushTokensInput, Prisma.UserUncheckedCreateWithoutPushTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutPushTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutPushTokensNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutPushTokensInput, Prisma.UserUncheckedCreateWithoutPushTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutPushTokensInput
+  upsert?: Prisma.UserUpsertWithoutPushTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutPushTokensInput, Prisma.UserUpdateWithoutPushTokensInput>, Prisma.UserUncheckedUpdateWithoutPushTokensInput>
 }
 
 export type UserCreateNestedOneWithoutSessionsInput = {
@@ -543,6 +564,94 @@ export type UserUpdateOneRequiredWithoutMessageReadsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutMessageReadsInput, Prisma.UserUpdateWithoutMessageReadsInput>, Prisma.UserUncheckedUpdateWithoutMessageReadsInput>
 }
 
+export type UserCreateWithoutPushTokensInput = {
+  id?: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  role?: $Enums.UserRole
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  profile?: Prisma.UserProfileCreateNestedOneWithoutUserInput
+  carts?: Prisma.CartCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutPushTokensInput = {
+  id?: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  role?: $Enums.UserRole
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  profile?: Prisma.UserProfileUncheckedCreateNestedOneWithoutUserInput
+  carts?: Prisma.CartUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutPushTokensInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutPushTokensInput, Prisma.UserUncheckedCreateWithoutPushTokensInput>
+}
+
+export type UserUpsertWithoutPushTokensInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutPushTokensInput, Prisma.UserUncheckedUpdateWithoutPushTokensInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutPushTokensInput, Prisma.UserUncheckedCreateWithoutPushTokensInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutPushTokensInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutPushTokensInput, Prisma.UserUncheckedUpdateWithoutPushTokensInput>
+}
+
+export type UserUpdateWithoutPushTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  profile?: Prisma.UserProfileUpdateOneWithoutUserNestedInput
+  carts?: Prisma.CartUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutPushTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  profile?: Prisma.UserProfileUncheckedUpdateOneWithoutUserNestedInput
+  carts?: Prisma.CartUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
+  giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
+}
+
 export type UserCreateWithoutSessionsInput = {
   id?: string
   name: string
@@ -558,6 +667,7 @@ export type UserCreateWithoutSessionsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -575,6 +685,7 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -608,6 +719,7 @@ export type UserUpdateWithoutSessionsInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -625,6 +737,7 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAccountsInput = {
@@ -642,6 +755,7 @@ export type UserCreateWithoutAccountsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAccountsInput = {
@@ -659,6 +773,7 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAccountsInput = {
@@ -692,6 +807,7 @@ export type UserUpdateWithoutAccountsInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -709,6 +825,7 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutProfileInput = {
@@ -726,6 +843,7 @@ export type UserCreateWithoutProfileInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutProfileInput = {
@@ -743,6 +861,7 @@ export type UserUncheckedCreateWithoutProfileInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutProfileInput = {
@@ -776,6 +895,7 @@ export type UserUpdateWithoutProfileInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutProfileInput = {
@@ -793,6 +913,7 @@ export type UserUncheckedUpdateWithoutProfileInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutCartsInput = {
@@ -810,6 +931,7 @@ export type UserCreateWithoutCartsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutCartsInput = {
@@ -827,6 +949,7 @@ export type UserUncheckedCreateWithoutCartsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutCartsInput = {
@@ -860,6 +983,7 @@ export type UserUpdateWithoutCartsInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCartsInput = {
@@ -877,6 +1001,7 @@ export type UserUncheckedUpdateWithoutCartsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutOrdersInput = {
@@ -894,6 +1019,7 @@ export type UserCreateWithoutOrdersInput = {
   carts?: Prisma.CartCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutOrdersInput = {
@@ -911,6 +1037,7 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   carts?: Prisma.CartUncheckedCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutOrdersInput = {
@@ -944,6 +1071,7 @@ export type UserUpdateWithoutOrdersInput = {
   carts?: Prisma.CartUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutOrdersInput = {
@@ -961,6 +1089,7 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   carts?: Prisma.CartUncheckedUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutGiftCardAccountInput = {
@@ -978,6 +1107,7 @@ export type UserCreateWithoutGiftCardAccountInput = {
   carts?: Prisma.CartCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptCreateNestedManyWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutGiftCardAccountInput = {
@@ -995,6 +1125,7 @@ export type UserUncheckedCreateWithoutGiftCardAccountInput = {
   carts?: Prisma.CartUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   messageReads?: Prisma.MessageReceiptUncheckedCreateNestedManyWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutGiftCardAccountInput = {
@@ -1028,6 +1159,7 @@ export type UserUpdateWithoutGiftCardAccountInput = {
   carts?: Prisma.CartUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUpdateManyWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutGiftCardAccountInput = {
@@ -1045,6 +1177,7 @@ export type UserUncheckedUpdateWithoutGiftCardAccountInput = {
   carts?: Prisma.CartUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   messageReads?: Prisma.MessageReceiptUncheckedUpdateManyWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutMessageReadsInput = {
@@ -1062,6 +1195,7 @@ export type UserCreateWithoutMessageReadsInput = {
   carts?: Prisma.CartCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutMessageReadsInput = {
@@ -1079,6 +1213,7 @@ export type UserUncheckedCreateWithoutMessageReadsInput = {
   carts?: Prisma.CartUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedCreateNestedOneWithoutUserInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutMessageReadsInput = {
@@ -1112,6 +1247,7 @@ export type UserUpdateWithoutMessageReadsInput = {
   carts?: Prisma.CartUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMessageReadsInput = {
@@ -1129,6 +1265,7 @@ export type UserUncheckedUpdateWithoutMessageReadsInput = {
   carts?: Prisma.CartUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   giftCardAccount?: Prisma.GiftCardAccountUncheckedUpdateOneWithoutUserNestedInput
+  pushTokens?: Prisma.DevicePushTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 
@@ -1142,6 +1279,7 @@ export type UserCountOutputType = {
   carts: number
   orders: number
   messageReads: number
+  pushTokens: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1150,6 +1288,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   carts?: boolean | UserCountOutputTypeCountCartsArgs
   orders?: boolean | UserCountOutputTypeCountOrdersArgs
   messageReads?: boolean | UserCountOutputTypeCountMessageReadsArgs
+  pushTokens?: boolean | UserCountOutputTypeCountPushTokensArgs
 }
 
 /**
@@ -1197,6 +1336,13 @@ export type UserCountOutputTypeCountMessageReadsArgs<ExtArgs extends runtime.Typ
   where?: Prisma.MessageReceiptWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountPushTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.DevicePushTokenWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1214,6 +1360,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   messageReads?: boolean | Prisma.User$messageReadsArgs<ExtArgs>
   giftCardAccount?: boolean | Prisma.User$giftCardAccountArgs<ExtArgs>
+  pushTokens?: boolean | Prisma.User$pushTokensArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -1259,6 +1406,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   messageReads?: boolean | Prisma.User$messageReadsArgs<ExtArgs>
   giftCardAccount?: boolean | Prisma.User$giftCardAccountArgs<ExtArgs>
+  pushTokens?: boolean | Prisma.User$pushTokensArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1274,6 +1422,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     orders: Prisma.$OrderPayload<ExtArgs>[]
     messageReads: Prisma.$MessageReceiptPayload<ExtArgs>[]
     giftCardAccount: Prisma.$GiftCardAccountPayload<ExtArgs> | null
+    pushTokens: Prisma.$DevicePushTokenPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1685,6 +1834,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   orders<T extends Prisma.User$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   messageReads<T extends Prisma.User$messageReadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$messageReadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MessageReceiptPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   giftCardAccount<T extends Prisma.User$giftCardAccountArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$giftCardAccountArgs<ExtArgs>>): Prisma.Prisma__GiftCardAccountClient<runtime.Types.Result.GetResult<Prisma.$GiftCardAccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  pushTokens<T extends Prisma.User$pushTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$pushTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DevicePushTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2270,6 +2420,30 @@ export type User$giftCardAccountArgs<ExtArgs extends runtime.Types.Extensions.In
    */
   include?: Prisma.GiftCardAccountInclude<ExtArgs> | null
   where?: Prisma.GiftCardAccountWhereInput
+}
+
+/**
+ * User.pushTokens
+ */
+export type User$pushTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DevicePushToken
+   */
+  select?: Prisma.DevicePushTokenSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the DevicePushToken
+   */
+  omit?: Prisma.DevicePushTokenOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DevicePushTokenInclude<ExtArgs> | null
+  where?: Prisma.DevicePushTokenWhereInput
+  orderBy?: Prisma.DevicePushTokenOrderByWithRelationInput | Prisma.DevicePushTokenOrderByWithRelationInput[]
+  cursor?: Prisma.DevicePushTokenWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.DevicePushTokenScalarFieldEnum | Prisma.DevicePushTokenScalarFieldEnum[]
 }
 
 /**

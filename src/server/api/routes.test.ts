@@ -14,6 +14,8 @@ const mocks = vi.hoisted(() => ({
   getGiftCard: vi.fn(),
   checkout: vi.fn(),
   recharge: vi.fn(),
+  registerPushToken: vi.fn(),
+  removePushToken: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({ hasDatabase: mocks.hasDatabase }));
@@ -33,6 +35,10 @@ vi.mock("@/server/services/orders", () => ({ getOrdersForUser: mocks.getOrders, 
 vi.mock("@/server/services/gift-cards", () => ({ getGiftCardSummaryForUser: mocks.getGiftCard }));
 vi.mock("@/server/services/checkout", () => ({ checkoutForUser: mocks.checkout }));
 vi.mock("@/server/services/gift-card-recharge", () => ({ rechargeGiftCardForUser: mocks.recharge }));
+vi.mock("@/server/services/push-tokens", () => ({
+  registerPushTokenForUser: mocks.registerPushToken,
+  removePushTokenForUser: mocks.removePushToken,
+}));
 
 import { GET as getAppConfig } from "@/app/api/v1/app-config/route";
 import { GET as getCatalog, OPTIONS as catalogOptions } from "@/app/api/v1/catalog/route";
@@ -45,6 +51,8 @@ import { GET as getGiftCard } from "@/app/api/v1/me/gift-card/route";
 import { POST as markRead } from "@/app/api/v1/me/messages/[id]/read/route";
 import { POST as checkout } from "@/app/api/v1/checkout/route";
 import { POST as recharge } from "@/app/api/v1/gift-card/recharges/route";
+import { PUT as registerPushToken, OPTIONS as pushTokenOptions } from "@/app/api/v1/me/push-tokens/route";
+import { DELETE as removePushToken } from "@/app/api/v1/me/push-tokens/[deviceId]/route";
 
 const originalEnv = { ...process.env };
 const user = { id: "user-1", name: "Lin", email: "lin@example.test", role: "CUSTOMER" };
@@ -288,5 +296,52 @@ describe("/api/v1 customer routes", () => {
     }));
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ data: { balance: 20_000, idempotent: true } });
+  });
+
+  it("registers and removes only the Bearer user's APNs device", async () => {
+    mocks.registerPushToken.mockResolvedValue({ registered: true, updatedAt: "2026-07-17T10:00:00.000Z" });
+    mocks.removePushToken.mockResolvedValue({ removed: true });
+    const input = { token: "a".repeat(64), deviceId: "iphone 1", environment: "DEVELOPMENT" };
+    const registered = await registerPushToken(bearerRequest("/api/v1/me/push-tokens", {
+      method: "PUT", body: JSON.stringify(input), headers: { origin: "capacitor://localhost" },
+    }));
+    expect(registered.status).toBe(200);
+    await expect(registered.json()).resolves.toEqual({ data: { registered: true, updatedAt: "2026-07-17T10:00:00.000Z" } });
+    expect(mocks.registerPushToken).toHaveBeenCalledWith("user-1", input);
+
+    const removed = await removePushToken(bearerRequest("/api/v1/me/push-tokens/iphone%201", { method: "DELETE" }), {
+      params: Promise.resolve({ deviceId: "iphone 1" }),
+    });
+    await expect(removed.json()).resolves.toEqual({ data: { removed: true } });
+    expect(mocks.removePushToken).toHaveBeenCalledWith("user-1", "iphone 1");
+  });
+
+  it("rejects invalid push registration and supports PUT/DELETE preflight", async () => {
+    const invalid = await registerPushToken(bearerRequest("/api/v1/me/push-tokens", {
+      method: "PUT", body: JSON.stringify({ token: "", deviceId: "", environment: "STAGING" }),
+    }));
+    expect(invalid.status).toBe(400);
+    expect(mocks.registerPushToken).not.toHaveBeenCalled();
+
+    const invalidRemoval = await removePushToken(bearerRequest("/api/v1/me/push-tokens/%20", { method: "DELETE" }), {
+      params: Promise.resolve({ deviceId: " " }),
+    });
+    expect(invalidRemoval.status).toBe(400);
+    expect(mocks.removePushToken).not.toHaveBeenCalled();
+
+    const options = pushTokenOptions(request("/api/v1/me/push-tokens", {
+      method: "OPTIONS", headers: { origin: "capacitor://localhost" },
+    }));
+    expect(options.headers.get("access-control-allow-methods")).toContain("PUT");
+    expect(options.headers.get("access-control-allow-methods")).toContain("DELETE");
+  });
+
+  it("requires Bearer auth before push-token service calls", async () => {
+    const response = await registerPushToken(request("/api/v1/me/push-tokens", {
+      method: "PUT", body: JSON.stringify({ token: "a".repeat(64), deviceId: "iphone-1", environment: "DEVELOPMENT" }),
+      headers: { cookie: "better-auth.session_token=web" },
+    }));
+    expect(response.status).toBe(401);
+    expect(mocks.registerPushToken).not.toHaveBeenCalled();
   });
 });

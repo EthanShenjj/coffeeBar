@@ -178,7 +178,16 @@ export type GiftCardTransaction = z.output<typeof giftCardTransactionSchema>;
 export const giftCardSummarySchema = z.object({ balance: nonnegativeCentsSchema, transactions: z.array(giftCardTransactionSchema), persistent: z.boolean() });
 export type GiftCardSummary = z.output<typeof giftCardSummarySchema>;
 
-export const pushTokenRegistrationSchema = z.object({ token: z.string().min(1), platform: z.enum(["IOS", "ANDROID", "WEB"]), deviceId: z.string().min(1).optional() });
+export const pushEnvironmentSchema = z.enum(["DEVELOPMENT", "PRODUCTION"]);
+export type PushEnvironment = z.output<typeof pushEnvironmentSchema>;
+export const pushDeviceIdSchema = z.string().trim().min(1).max(200);
+export const pushTokenRegistrationSchema = z.object({
+  token: z.string().trim().regex(/^[A-Fa-f0-9]{64,200}$/),
+  deviceId: pushDeviceIdSchema,
+  environment: pushEnvironmentSchema,
+}).strict();
 export type PushTokenRegistration = z.output<typeof pushTokenRegistrationSchema>;
-export const pushTokenRegistrationResultSchema = z.object({ registered: z.boolean(), updatedAt: isoDateTimeSchema });
+export const pushTokenRegistrationResultSchema = z.object({ registered: z.boolean(), updatedAt: isoDateTimeSchema }).strict();
 export type PushTokenRegistrationResult = z.output<typeof pushTokenRegistrationResultSchema>;
+export const pushTokenRemovalResultSchema = z.object({ removed: z.boolean() }).strict();
+export type PushTokenRemovalResult = z.output<typeof pushTokenRemovalResultSchema>;

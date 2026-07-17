@@ -65,3 +65,11 @@ export const AnnouncementStatus = {
 } as const
 
 export type AnnouncementStatus = (typeof AnnouncementStatus)[keyof typeof AnnouncementStatus]
+
+
+export const PushEnvironment = {
+  DEVELOPMENT: 'DEVELOPMENT',
+  PRODUCTION: 'PRODUCTION'
+} as const
+
+export type PushEnvironment = (typeof PushEnvironment)[keyof typeof PushEnvironment]

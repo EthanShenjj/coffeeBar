@@ -6,3 +6,12 @@ export class ServiceNotFoundError extends Error {
     this.name = "ServiceNotFoundError";
   }
 }
+
+export class ServiceConflictError extends Error {
+  readonly code = "CONFLICT";
+
+  constructor(message = "资源状态已变化") {
+    super(message);
+    this.name = "ServiceConflictError";
+  }
+}
