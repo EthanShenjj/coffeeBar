@@ -69,7 +69,7 @@ export async function getAnnouncements() {
   const session = await getSession();
   if (!hasDatabase()) return DEMO_ANNOUNCEMENTS;
   const rows = await getDb().announcement.findMany({ where: { status: "PUBLISHED", publishedAt: { lte: new Date() } }, orderBy: { publishedAt: "desc" }, include: { receipts: session ? { where: { userId: session.user.id }, select: { id: true } } : false } });
-  return rows.map((item) => ({ id: item.id, title: item.title, summary: item.summary, date: (item.publishedAt ?? item.createdAt).toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" }), read: "receipts" in item && Array.isArray(item.receipts) && item.receipts.length > 0 }));
+  return rows.map((item) => ({ id: item.id, title: item.title, summary: item.summary, date: (item.publishedAt ?? item.createdAt).toISOString().slice(0, 10), read: "receipts" in item && Array.isArray(item.receipts) && item.receipts.length > 0 }));
 }
 
 export async function getAdminData() {

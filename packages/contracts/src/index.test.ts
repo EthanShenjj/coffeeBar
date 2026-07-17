@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   apiErrorCodeSchema,
   announcementDetailSchema,
+  announcementSummarySchema,
   appConfigSchema,
   checkoutInputSchema,
   giftCardSummarySchema,
   orderDetailSchema,
   productViewSchema,
+  profileDashboardSchema,
 } from "./index";
 
 describe("shared API contracts", () => {
@@ -40,5 +42,34 @@ describe("shared API contracts", () => {
     const product = { id: "latte", slug: "latte", name: "拿铁", subtitle: "经典", description: "奶咖", channel: "MENU", category: "咖啡", price: 6800, imageUrl: "https://coffeebar.local/latte.png", stock: null, isAvailable: true, optionGroups: [{ id: "milk", name: "奶", required: true, maxSelect: 1, options: [{ id: "oat", name: "燕麦奶", priceDelta: 300, isDefault: false }] }] };
     expect(productViewSchema.safeParse(product).success).toBe(true);
     expect(productViewSchema.safeParse({ ...product, price: 68.5 }).success).toBe(false);
+  });
+
+  it("rejects malformed announcement and dashboard ISO dates", () => {
+    const announcement = { id: "a1", title: "夏日上新", summary: "冷萃回归", date: "2026-07-17", read: false };
+    const dashboard = {
+      user: { name: "Coffee Lover", email: "demo@coffeebar.local", role: "CUSTOMER" },
+      giftCardBalance: 0, totalPaid: 68_600, monthPaid: 12_800, orderCount: 18, average: 3811,
+      level: { level: 3, currentThreshold: 30_000, nextThreshold: 60_000, progress: 64 },
+      months: [38, 62, 45, 79, 54, 88], coffeeDays: ["2026-07-16"], today: "2026-07-17",
+    };
+    expect(announcementSummarySchema.safeParse(announcement).success).toBe(true);
+    expect(announcementSummarySchema.safeParse({ ...announcement, date: "07.17" }).success).toBe(false);
+    expect(profileDashboardSchema.safeParse(dashboard).success).toBe(true);
+    expect(profileDashboardSchema.safeParse({ ...dashboard, coffeeDays: ["July 16"] }).success).toBe(false);
+    expect(profileDashboardSchema.safeParse({ ...dashboard, today: "2026/07/17" }).success).toBe(false);
+  });
+
+  it("requires a valid member level with nonnegative integer-cent thresholds", () => {
+    const dashboard = {
+      user: { name: "Coffee Lover", email: "demo@coffeebar.local", role: "CUSTOMER" },
+      giftCardBalance: 0, totalPaid: 68_600, monthPaid: 12_800, orderCount: 18, average: 3811,
+      level: { level: 3, currentThreshold: 30_000, nextThreshold: 60_000, progress: 64 },
+      months: [38, 62, 45, 79, 54, 88], coffeeDays: [], today: "2026-07-17",
+    };
+    expect(profileDashboardSchema.safeParse(dashboard).success).toBe(true);
+    expect(profileDashboardSchema.safeParse({ ...dashboard, level: { ...dashboard.level, currentThreshold: -1 } }).success).toBe(false);
+    expect(profileDashboardSchema.safeParse({ ...dashboard, level: { ...dashboard.level, nextThreshold: 60_000.5 } }).success).toBe(false);
+    expect(profileDashboardSchema.safeParse({ ...dashboard, level: { level: "three" } }).success).toBe(false);
+    expect(profileDashboardSchema.safeParse({ ...dashboard, level: { ...dashboard.level, nextThreshold: null } }).success).toBe(true);
   });
 });

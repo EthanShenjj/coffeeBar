@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 const centsSchema = z.number().int();
+const nonnegativeCentsSchema = centsSchema.min(0);
+const isoDateSchema = z.iso.date();
 const isoDateTimeSchema = z.string().datetime({ offset: true });
 const optionalUrlSchema = z.string().url().nullable();
 
@@ -119,7 +121,7 @@ export const appConfigSchema = z.object({
 export type AppConfig = { supportEmail: string; termsUrl: string; privacyUrl: string; updatedAt: string };
 
 export const announcementSummarySchema = z.object({
-  id: z.string(), title: z.string(), summary: z.string(), date: z.string(), read: z.boolean(),
+  id: z.string(), title: z.string(), summary: z.string(), date: isoDateSchema, read: z.boolean(),
 });
 export type AnnouncementSummary = { id: string; title: string; summary: string; date: string; read: boolean };
 export const announcementDetailSchema = z.object({
@@ -128,14 +130,22 @@ export const announcementDetailSchema = z.object({
 });
 export type AnnouncementDetail = { id: string; title: string; summary: string; content: string; coverUrl: string | null; publishedAt: string; createdAt: string; read: boolean };
 
+export const memberLevelSchema = z.object({
+  level: z.number().int().min(1),
+  currentThreshold: nonnegativeCentsSchema,
+  nextThreshold: nonnegativeCentsSchema.nullable(),
+  progress: z.number().int().min(0).max(100),
+});
+export type MemberLevel = { level: number; currentThreshold: number; nextThreshold: number | null; progress: number };
+
 export const profileDashboardSchema = z.object({
   user: z.object({ name: z.string(), email: z.string().email(), role: z.string() }),
   giftCardBalance: centsSchema, totalPaid: centsSchema, monthPaid: centsSchema, orderCount: z.number().int().min(0),
-  average: centsSchema, level: z.unknown(), months: z.array(z.number().int()), coffeeDays: z.array(z.string()), today: z.string(),
+  average: centsSchema, level: memberLevelSchema, months: z.array(z.number().int()), coffeeDays: z.array(isoDateSchema), today: isoDateSchema,
 });
 export type ProfileDashboard = {
   user: { name: string; email: string; role: string }; giftCardBalance: number; totalPaid: number; monthPaid: number;
-  orderCount: number; average: number; level: unknown; months: number[]; coffeeDays: string[]; today: string;
+  orderCount: number; average: number; level: MemberLevel; months: number[]; coffeeDays: string[]; today: string;
 };
 
 export const orderItemSchema = z.object({
