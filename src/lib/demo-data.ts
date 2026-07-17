@@ -113,7 +113,7 @@ export const DEMO_PRODUCTS: ProductView[] = [
 ];
 
 export const DEMO_ANNOUNCEMENTS = [
-  { id: "a1", title: "夏日果咖季", summary: "三款限定果咖，本周会员优先尝鲜。", date: "2026-07-12", read: false },
-  { id: "a2", title: "周末手冲分享会", summary: "认识产区、处理法与风味，限额 12 人。", date: "2026-07-08", read: false },
-  { id: "a3", title: "自带杯计划", summary: "少一点浪费，多一点日常。", date: "2026-06-28", read: true },
+  { id: "a1", title: "夏日果咖季", summary: "三款限定果咖，本周会员优先尝鲜。", date: "07.12", read: false },
+  { id: "a2", title: "周末手冲分享会", summary: "认识产区、处理法与风味，限额 12 人。", date: "07.08", read: false },
+  { id: "a3", title: "自带杯计划", summary: "少一点浪费，多一点日常。", date: "06.28", read: true },
 ];
