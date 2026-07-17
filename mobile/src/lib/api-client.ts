@@ -1,6 +1,7 @@
 import { apiFailureSchema, apiSuccessSchema, type ApiErrorCode } from "@coffeebar/contracts";
 import { z } from "zod";
 import type { SessionTokenStore } from "../auth/session-token-store";
+import type { SessionInvalidationResult } from "../auth/auth-controller";
 import { saveIntendedRoute } from "../auth/intended-route";
 
 export class ApiClientError extends Error {
@@ -21,7 +22,7 @@ type ClientOptions = {
   fetcher?: (input: string, init?: RequestInit) => Promise<Response>;
   navigate?: (path: string, options?: { replace?: boolean }) => void;
   getCurrentPath?: () => string;
-  invalidateSession: () => Promise<void>;
+  invalidateSession: (usedToken: string | null) => Promise<SessionInvalidationResult>;
   clearSensitiveSessionQueries: () => Promise<void> | void;
 };
 
@@ -33,22 +34,27 @@ function joinUrl(baseUrl: string, path: string) {
 
 export function createApiClient(options: ClientOptions) {
   const fetcher = options.fetcher ?? ((input: string, init?: RequestInit) => fetch(input, init));
-  let unauthorizedTask: Promise<void> | null = null;
+  const unauthorizedTasks = new Map<string, Promise<void>>();
 
-  async function handleUnauthorized() {
-    unauthorizedTask ??= (async () => {
-      saveIntendedRoute(options.getCurrentPath?.() ?? `${window.location.pathname}${window.location.search}`);
-      try {
-        await options.invalidateSession();
-      } finally {
+  async function handleUnauthorized(usedToken: string | null) {
+    const key = usedToken ?? "<anonymous>";
+    let task = unauthorizedTasks.get(key);
+    if (!task) {
+      task = (async () => {
+        const invalidation = await options.invalidateSession(usedToken);
+        if (invalidation === "stale") return;
         try {
           await options.clearSensitiveSessionQueries();
         } finally {
-          options.navigate?.("/login", { replace: true });
+          if (invalidation === "invalidated") {
+            saveIntendedRoute(options.getCurrentPath?.() ?? `${window.location.pathname}${window.location.search}`);
+            options.navigate?.("/login", { replace: true });
+          }
         }
-      }
-    })().finally(() => { unauthorizedTask = null; });
-    await unauthorizedTask;
+      })().finally(() => { unauthorizedTasks.delete(key); });
+      unauthorizedTasks.set(key, task);
+    }
+    await task;
   }
 
   async function request<T>(path: string, init: RequestOptions<T> = {}): Promise<T> {
@@ -56,9 +62,10 @@ export function createApiClient(options: ClientOptions) {
     const headers = new Headers(requestInit.headers);
     headers.set("Accept", "application/json");
     if (requestInit.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+    let usedToken: string | null = null;
     if (authenticated) {
-      const token = await options.tokenStore.get();
-      if (token) headers.set("Authorization", `Bearer ${token}`);
+      usedToken = await options.tokenStore.get();
+      if (usedToken) headers.set("Authorization", `Bearer ${usedToken}`);
     }
 
     let response: Response;
@@ -74,7 +81,7 @@ export function createApiClient(options: ClientOptions) {
       const error = failure.success
         ? new ApiClientError(failure.data.error.code, failure.data.error.message, response.status, failure.data.error.fieldErrors)
         : new ApiClientError("INTERNAL_ERROR", "服务器返回了无效响应", response.status);
-      if (response.status === 401) await handleUnauthorized();
+      if (response.status === 401) await handleUnauthorized(usedToken);
       throw error;
     }
 

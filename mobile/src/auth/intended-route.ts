@@ -6,12 +6,17 @@ function isSafePath(path: string) {
 
 export function saveIntendedRoute(path: string) {
   if (isSafePath(path) && path !== "/login" && path !== "/register") {
-    window.sessionStorage.setItem(KEY, path);
+    try { window.sessionStorage.setItem(KEY, path); } catch { /* Navigation still proceeds without persistence. */ }
   }
 }
 
 export function consumeIntendedRoute(fallback = "/") {
-  const value = window.sessionStorage.getItem(KEY);
-  window.sessionStorage.removeItem(KEY);
+  let value: string | null = null;
+  try {
+    value = window.sessionStorage.getItem(KEY);
+    window.sessionStorage.removeItem(KEY);
+  } catch {
+    return fallback;
+  }
   return value && isSafePath(value) ? value : fallback;
 }

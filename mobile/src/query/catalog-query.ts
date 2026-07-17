@@ -21,7 +21,7 @@ export function catalogQueryOptions(input: { channel: CartKind; api: ApiClient; 
 
 export async function restoreCatalogQueries(queryClient: QueryClient, cache: CatalogCache) {
   await Promise.all((["MENU", "SHOP"] as const).map(async (channel) => {
-    const products = await cache.restore(channel);
-    if (products.length) queryClient.setQueryData(catalogQueryKey(channel), products);
+    const entry = await cache.restore(channel);
+    if (entry?.products.length) queryClient.setQueryData(catalogQueryKey(channel), entry.products, { updatedAt: entry.updatedAt });
   }));
 }

@@ -1,4 +1,4 @@
-import { createNetworkStore, OfflineOperationError } from "./network-store";
+import { createNetworkStore, observeNetwork, OfflineOperationError } from "./network-store";
 
 describe("network operation guard", () => {
   it.each(["checkout", "recharge", "mark-read"] as const)("blocks %s offline with a presentable message", (operation) => {
@@ -13,5 +13,15 @@ describe("network operation guard", () => {
     await network.getState().setOnline(true);
     expect(network.getState().recoveryNotice).toBe("网络已恢复");
     expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  it("returns a disposer that removes Web network listeners", async () => {
+    const network = createNetworkStore({ initialOnline: true });
+    const dispose = await observeNetwork(network);
+    window.dispatchEvent(new Event("offline"));
+    expect(network.getState().online).toBe(false);
+    dispose();
+    window.dispatchEvent(new Event("online"));
+    expect(network.getState().online).toBe(false);
   });
 });

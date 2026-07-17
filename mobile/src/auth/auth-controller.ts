@@ -2,9 +2,10 @@ import type { SessionTokenStore } from "./session-token-store";
 
 export type SessionUser = { id: string; name: string; email: string };
 export type AuthSnapshot = {
-  status: "restoring" | "authenticated" | "anonymous";
+  status: "restoring" | "authenticated" | "anonymous" | "retryable";
   user: SessionUser | null;
 };
+export type SessionInvalidationResult = "stale" | "invalidated" | "superseded";
 
 type AuthControllerOptions = {
   tokenStore: SessionTokenStore;
@@ -29,16 +30,21 @@ export function createAuthController(options: AuthControllerOptions) {
   let token: string | null = null;
   let snapshot: AuthSnapshot = { status: "restoring", user: null };
   let sessionEpoch = 0;
-  let invalidationTask: Promise<void> | null = null;
+  let credentialWrite: Promise<void> = Promise.resolve();
   const listeners = new Set<() => void>();
   const publish = (next: AuthSnapshot) => {
     snapshot = next;
     for (const listener of listeners) listener();
   };
-  const authHeaders = () => {
+  const authHeaders = (value: string | null = token) => {
     const headers = new Headers();
-    if (token) headers.set("Authorization", `Bearer ${token}`);
+    if (value) headers.set("Authorization", `Bearer ${value}`);
     return headers;
+  };
+  const enqueueCredentialWrite = <T>(operation: () => Promise<T>) => {
+    const result = credentialWrite.then(operation, operation);
+    credentialWrite = result.then(() => undefined, () => undefined);
+    return result;
   };
 
   async function restore() {
@@ -57,37 +63,47 @@ export function createAuthController(options: AuthControllerOptions) {
     }
     try {
       const response = await fetcher(url(options.apiBaseUrl, "/api/auth/get-session"), { headers: authHeaders() });
-      const body = await response.json() as { user?: unknown } | null;
-      const user = response.ok ? parseUser(body?.user) : null;
       if (restoreEpoch !== sessionEpoch) return;
+      if (response.status === 401) {
+        await invalidateSession(restoredToken);
+        return;
+      }
+      if (!response.ok) {
+        publish({ status: "retryable", user: null });
+        return;
+      }
+      let body: { user?: unknown } | null;
+      try {
+        body = await response.json() as { user?: unknown } | null;
+      } catch {
+        publish({ status: "retryable", user: null });
+        return;
+      }
+      const user = parseUser(body?.user);
       if (!user) {
-        try {
-          await options.tokenStore.remove();
-        } finally {
-          token = null;
-          publish({ status: "anonymous", user: null });
-        }
+        await invalidateSession(restoredToken);
         return;
       }
       publish({ status: "authenticated", user });
     } catch {
       // A transport failure does not prove that the credential is invalid.
-      if (restoreEpoch === sessionEpoch) publish({ status: "anonymous", user: null });
+      if (restoreEpoch === sessionEpoch) publish({ status: "retryable", user: null });
     }
   }
 
-  async function invalidateSession() {
-    invalidationTask ??= (async () => {
-      sessionEpoch += 1;
-      token = null;
-      publish({ status: "anonymous", user: null });
+  async function invalidateSession(expectedToken: string | null) {
+    if (token !== expectedToken) return "stale" as const;
+    const invalidationEpoch = ++sessionEpoch;
+    token = null;
+    publish({ status: "anonymous", user: null });
+    await enqueueCredentialWrite(async () => {
       try {
         await options.tokenStore.remove();
       } catch {
         // In-memory authentication must still be invalidated if Keychain is unavailable.
       }
-    })().finally(() => { invalidationTask = null; });
-    await invalidationTask;
+    });
+    return sessionEpoch === invalidationEpoch && token === null ? "invalidated" as const : "superseded" as const;
   }
 
   async function submit(path: string, input: Record<string, unknown>) {
@@ -101,29 +117,46 @@ export function createAuthController(options: AuthControllerOptions) {
     const nextToken = response.headers.get("set-auth-token");
     const user = parseUser(body?.user);
     if (!nextToken || !user) throw new Error("登录响应无效");
-    await options.tokenStore.set(nextToken);
+    const submitEpoch = ++sessionEpoch;
     token = nextToken;
+    try {
+      await enqueueCredentialWrite(() => options.tokenStore.set(nextToken));
+    } catch {
+      if (submitEpoch === sessionEpoch) {
+        token = null;
+        publish({ status: "anonymous", user: null });
+      }
+      throw new Error("无法安全保存登录状态");
+    }
+    if (submitEpoch !== sessionEpoch || token !== nextToken) throw new Error("登录状态已变更，请重试");
     publish({ status: "authenticated", user });
     return user;
   }
 
   async function signOut() {
-    token = token ?? await options.tokenStore.get();
+    if (!token) {
+      try { token = await options.tokenStore.get(); } catch { token = null; }
+    }
+    const logoutToken = token;
+    const logoutHeaders = authHeaders(logoutToken);
+    if (options.deviceId) {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          const response = await fetcher(url(options.apiBaseUrl, `/api/v1/me/push-tokens/${encodeURIComponent(options.deviceId)}`), {
+            method: "DELETE", headers: logoutHeaders,
+          });
+          if (response.ok || response.status < 500) break;
+        } catch {
+          // Retry once before continuing local logout.
+        }
+      }
+    }
     try {
-      await fetcher(url(options.apiBaseUrl, "/api/auth/sign-out"), { method: "POST", headers: authHeaders() });
+      await fetcher(url(options.apiBaseUrl, "/api/auth/sign-out"), { method: "POST", headers: logoutHeaders });
     } catch {
       // Local logout must continue.
     }
-    if (options.deviceId) {
-      try {
-        await fetcher(url(options.apiBaseUrl, `/api/v1/me/push-tokens/${encodeURIComponent(options.deviceId)}`), {
-          method: "DELETE", headers: authHeaders(),
-        });
-      } catch {
-        // Token cleanup is best effort while offline.
-      }
-    }
-    await invalidateSession();
+    await invalidateSession(logoutToken);
   }
 
   return {

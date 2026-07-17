@@ -18,6 +18,19 @@ describe("mobile bearer session", () => {
     expect(auth.getSnapshot().status).toBe("authenticated");
   });
 
+  it.each([500, 503])("keeps a valid stored token on a retryable %s session response", async (status) => {
+    const store = createBrowserSessionTokenStore();
+    await store.set("still-valid");
+    const auth = createAuthController({
+      tokenStore: store,
+      apiBaseUrl: "https://api.example.com",
+      fetcher: vi.fn(async () => Response.json({ message: "temporary" }, { status })),
+    });
+    await auth.restore();
+    expect(await store.get()).toBe("still-valid");
+    expect(auth.getSnapshot()).toEqual({ status: "retryable", user: null });
+  });
+
   it("captures set-auth-token after email sign in", async () => {
     const store = createBrowserSessionTokenStore();
     const fetcher = vi.fn(async () => new Response(JSON.stringify({ user: { id: "u1", email: "a@example.com", name: "A" } }), {
@@ -34,7 +47,7 @@ describe("mobile bearer session", () => {
     await store.set("expired");
     const navigate = vi.fn();
     const clearSessionQuery = vi.fn();
-    const invalidateSession = vi.fn(async () => store.remove());
+    const invalidateSession = vi.fn(async () => { await store.remove(); return "invalidated" as const; });
     const client = createApiClient({
       baseUrl: "https://api.example.com", tokenStore: store, navigate,
       fetcher: vi.fn(async () => Response.json({ error: { code: "UNAUTHORIZED", message: "expired" } }, { status: 401 })),
@@ -65,7 +78,22 @@ describe("mobile bearer session", () => {
     expect(window.sessionStorage.length).toBe(0);
   });
 
-  it("revokes session, unregisters push, then clears locally even when requests fail", async () => {
+  it("unregisters push while bearer auth is valid, then revokes and clears locally", async () => {
+    const events: string[] = [];
+    const store = {
+      get: vi.fn(async () => "token"), set: vi.fn(), remove: vi.fn(async () => { events.push("clear"); }),
+    };
+    const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer token");
+      events.push(url.includes("push-tokens") ? "push" : "revoke");
+      return Response.json({ data: { removed: true } });
+    });
+    const auth = createAuthController({ tokenStore: store, fetcher, apiBaseUrl: "https://api.example.com", deviceId: "phone-1" });
+    await auth.signOut();
+    expect(events).toEqual(["push", "revoke", "clear"]);
+  });
+
+  it("bounds push cleanup retries and always clears locally when offline", async () => {
     const events: string[] = [];
     const store = {
       get: vi.fn(async () => "token"), set: vi.fn(),
@@ -77,7 +105,19 @@ describe("mobile bearer session", () => {
     });
     const auth = createAuthController({ tokenStore: store, fetcher, apiBaseUrl: "https://api.example.com", deviceId: "phone-1" });
     await auth.signOut();
-    expect(events).toEqual(["revoke", "push", "clear"]);
+    expect(events).toEqual(["push", "push", "revoke", "clear"]);
+    expect(auth.getSnapshot().status).toBe("anonymous");
+  });
+
+  it("still completes local logout when secure-store reads fail", async () => {
+    const store = {
+      get: vi.fn(async () => { throw new Error("Keychain unavailable"); }),
+      set: vi.fn(),
+      remove: vi.fn(async () => undefined),
+    };
+    const auth = createAuthController({ tokenStore: store, fetcher: vi.fn(async () => { throw new Error("offline"); }), apiBaseUrl: "https://api.example.com" });
+    await expect(auth.signOut()).resolves.toBeUndefined();
+    expect(store.remove).toHaveBeenCalledOnce();
     expect(auth.getSnapshot().status).toBe("anonymous");
   });
 });

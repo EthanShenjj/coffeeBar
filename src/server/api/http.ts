@@ -1,14 +1,12 @@
 import { z } from "zod";
 import type { ApiErrorCode } from "@coffeebar/contracts";
-import { buildTrustedOrigins, requireUserFromHeaders, UnauthorizedError } from "@/lib/auth";
+import { requireUserFromHeaders, UnauthorizedError } from "@/lib/auth";
 import { hasDatabase } from "@/lib/db";
 import { ServiceConflictError, ServiceNotFoundError } from "@/server/services/errors";
+import { corsHeadersForRequest, type ApiEnvironment } from "@/server/api/cors";
 
-export type ApiEnvironment = {
-  NEXT_PUBLIC_APP_URL?: string;
-  BETTER_AUTH_URL?: string;
-  MOBILE_ALLOWED_ORIGIN?: string;
-};
+export { corsHeadersForRequest } from "@/server/api/cors";
+export type { ApiEnvironment } from "@/server/api/cors";
 
 export class ApiConflictError extends Error {
   constructor(message: string) {
@@ -75,21 +73,6 @@ export type MappedApiError = {
     fieldErrors?: Record<string, string[]>;
   };
 };
-
-export function corsHeadersForRequest(
-  request: Request,
-  env: ApiEnvironment = process.env as ApiEnvironment,
-) {
-  const origin = request.headers.get("origin");
-  const allowed = origin === null || buildTrustedOrigins(env).includes(origin);
-  const headers = new Headers({
-    Vary: "Origin",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization, Content-Type",
-  });
-  if (origin && allowed) headers.set("Access-Control-Allow-Origin", origin);
-  return { allowed, headers };
-}
 
 function responseHeaders(request: Request, env?: ApiEnvironment) {
   const { headers } = corsHeadersForRequest(request, env);

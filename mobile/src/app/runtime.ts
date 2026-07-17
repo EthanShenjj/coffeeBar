@@ -2,6 +2,8 @@ import { QueryClient } from "@tanstack/react-query";
 import { createAuthController } from "../auth/auth-controller";
 import { createSessionTokenStore, type SessionTokenStore } from "../auth/session-token-store";
 import { createApiClient } from "../lib/api-client";
+import { getInstallationDeviceId } from "../config/device-id";
+import { getSafeLocalStorage } from "../lib/safe-storage";
 
 type RuntimeOptions = {
   apiBaseUrl: string;
@@ -10,6 +12,7 @@ type RuntimeOptions = {
   navigate?: (path: string, options?: { replace?: boolean }) => void;
   getCurrentPath?: () => string;
   queryClient?: QueryClient;
+  deviceId?: string;
 };
 
 function browserNavigate(path: string, options?: { replace?: boolean }) {
@@ -34,6 +37,7 @@ export function createMobileRuntime(options: RuntimeOptions) {
     tokenStore,
     apiBaseUrl: options.apiBaseUrl,
     fetcher: options.fetcher,
+    deviceId: options.deviceId ?? getInstallationDeviceId(getSafeLocalStorage()),
   });
   const api = createApiClient({
     baseUrl: options.apiBaseUrl,

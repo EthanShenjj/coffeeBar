@@ -87,6 +87,7 @@ function Protected({ auth, children }: { auth: AuthSnapshot; children: ReactNode
     if (auth.status === "anonymous") saveIntendedRoute(`${location.pathname}${location.search}`);
   }, [auth.status, location.pathname, location.search]);
   if (auth.status === "restoring") return <main id="main-content" aria-live="polite"><p>正在恢复登录状态…</p></main>;
+  if (auth.status === "retryable") return <main id="main-content" aria-live="polite"><p>暂时无法验证登录状态，网络恢复后将自动重试。</p></main>;
   if (auth.status === "anonymous") return <Navigate to="/login" replace />;
   return children;
 }
