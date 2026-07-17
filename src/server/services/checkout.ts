@@ -63,6 +63,10 @@ export function sanitizeCheckoutError(error: unknown) {
   return "支付未完成，请稍后重试";
 }
 
+function isWriteConflict(error: unknown) {
+  return Boolean(error && typeof error === "object" && "code" in error && error.code === "P2034");
+}
+
 export async function checkoutForUser(userId: string, raw: unknown): Promise<CheckoutServiceResult> {
   const parsed = checkoutSchema.safeParse(raw);
   if (!parsed.success) return unchanged({ ok: false, message: parsed.error.issues[0]?.message ?? "结算信息有误" });
@@ -73,9 +77,7 @@ export async function checkoutForUser(userId: string, raw: unknown): Promise<Che
     const existing = await db.order.findUnique({ where: { checkoutToken: input.token }, select: existingOrderSelect });
     if (existing) return unchanged(resultFromExistingOrder(existing, userId));
 
-    let transactionResult;
-    try {
-      transactionResult = await db.$transaction(async (tx) => {
+    const executeTransaction = () => db.$transaction(async (tx) => {
         const productIds = [...new Set(input.items.map((item) => item.productId))];
         const products = await tx.product.findMany({
           where: { id: { in: productIds }, isAvailable: true },
@@ -137,11 +139,19 @@ export async function checkoutForUser(userId: string, raw: unknown): Promise<Che
         }
         return { order, split, totalAmount };
       }, { isolationLevel: "Serializable" });
-    } catch (transactionError) {
-      const winningOrder = await db.order.findUnique({ where: { checkoutToken: input.token }, select: existingOrderSelect });
-      if (winningOrder) return unchanged(resultFromExistingOrder(winningOrder, userId));
-      throw transactionError;
+
+    let transactionResult: Awaited<ReturnType<typeof executeTransaction>> | undefined;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        transactionResult = await executeTransaction();
+        break;
+      } catch (transactionError) {
+        const winningOrder = await db.order.findUnique({ where: { checkoutToken: input.token }, select: existingOrderSelect });
+        if (winningOrder) return unchanged(resultFromExistingOrder(winningOrder, userId));
+        if (!isWriteConflict(transactionError) || attempt === 2) throw transactionError;
+      }
     }
+    if (!transactionResult) throw new Error("支付未完成，请稍后重试");
 
     return {
       created: true,

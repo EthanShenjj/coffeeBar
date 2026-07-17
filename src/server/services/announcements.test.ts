@@ -1,51 +1,60 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ announcementFindFirst: vi.fn(), receiptUpsert: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  transaction: vi.fn(),
+  outerAnnouncementFindFirst: vi.fn(), outerReceiptUpsert: vi.fn(),
+  txAnnouncementFindFirst: vi.fn(), txReceiptUpsert: vi.fn(),
+}));
+const tx = {
+  announcement: { findFirst: mocks.txAnnouncementFindFirst },
+  messageReceipt: { upsert: mocks.txReceiptUpsert },
+};
 vi.mock("@/lib/db", () => ({
   getDb: () => ({
-    announcement: { findFirst: mocks.announcementFindFirst },
-    messageReceipt: { upsert: mocks.receiptUpsert },
+    $transaction: mocks.transaction,
+    announcement: { findFirst: mocks.outerAnnouncementFindFirst },
+    messageReceipt: { upsert: mocks.outerReceiptUpsert },
   }),
 }));
 
 import { markAnnouncementReadForUser } from "@/server/services/announcements";
 
 describe("markAnnouncementReadForUser", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.transaction.mockImplementation(async (callback: (client: typeof tx) => unknown) => callback(tx));
+  });
 
-  it("checks the same published visibility rule before upserting", async () => {
-    mocks.announcementFindFirst.mockResolvedValueOnce({ id: "announcement-1" });
-    mocks.receiptUpsert.mockResolvedValueOnce({ id: "receipt-1" });
+  it("checks visibility and upserts using the same serializable transaction client", async () => {
+    mocks.txAnnouncementFindFirst.mockResolvedValueOnce({ id: "announcement-1" });
+    mocks.txReceiptUpsert.mockResolvedValueOnce({ id: "receipt-1" });
 
     await expect(markAnnouncementReadForUser("user-1", "announcement-1")).resolves.toBeUndefined();
-    expect(mocks.announcementFindFirst).toHaveBeenCalledWith({
-      where: {
-        id: "announcement-1",
-        status: "PUBLISHED",
-        publishedAt: { lte: expect.any(Date) },
-      },
+    expect(mocks.transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "Serializable" });
+    expect(mocks.txAnnouncementFindFirst).toHaveBeenCalledWith({
+      where: { id: "announcement-1", status: "PUBLISHED", publishedAt: { lte: expect.any(Date) } },
       select: { id: true },
     });
-    expect(mocks.receiptUpsert).toHaveBeenCalledOnce();
+    expect(mocks.txReceiptUpsert).toHaveBeenCalledOnce();
+    expect(mocks.outerAnnouncementFindFirst).not.toHaveBeenCalled();
+    expect(mocks.outerReceiptUpsert).not.toHaveBeenCalled();
   });
 
-  it("throws a typed not-found error without attempting an upsert for missing or invisible IDs", async () => {
-    mocks.announcementFindFirst.mockResolvedValueOnce(null);
+  it("throws a typed not-found error without upserting missing or invisible IDs", async () => {
+    mocks.txAnnouncementFindFirst.mockResolvedValueOnce(null);
 
     await expect(markAnnouncementReadForUser("user-1", "draft-or-missing")).rejects.toMatchObject({
-      name: "ServiceNotFoundError",
-      code: "NOT_FOUND",
-      message: "消息不存在",
+      name: "ServiceNotFoundError", code: "NOT_FOUND", message: "消息不存在",
     });
-    expect(mocks.receiptUpsert).not.toHaveBeenCalled();
+    expect(mocks.txReceiptUpsert).not.toHaveBeenCalled();
   });
 
-  it("maps a deletion race foreign-key failure to the typed not-found error", async () => {
-    mocks.announcementFindFirst.mockResolvedValueOnce({ id: "announcement-1" });
-    mocks.receiptUpsert.mockRejectedValueOnce({ code: "P2003", message: "secret constraint detail" });
+  it("maps a deletion-race foreign-key failure to the typed not-found error", async () => {
+    mocks.txAnnouncementFindFirst.mockResolvedValueOnce({ id: "announcement-1" });
+    mocks.txReceiptUpsert.mockRejectedValueOnce({ code: "P2003", message: "secret constraint detail" });
 
-    const promise = markAnnouncementReadForUser("user-1", "announcement-1");
-    await expect(promise).rejects.toMatchObject({ name: "ServiceNotFoundError", code: "NOT_FOUND", message: "消息不存在" });
-    await expect(promise).rejects.not.toMatchObject({ message: expect.stringContaining("secret") });
+    await expect(markAnnouncementReadForUser("user-1", "announcement-1")).rejects.toMatchObject({
+      name: "ServiceNotFoundError", code: "NOT_FOUND", message: "消息不存在",
+    });
   });
 });

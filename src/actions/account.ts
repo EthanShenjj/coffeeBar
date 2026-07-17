@@ -26,7 +26,14 @@ export async function updateProfile(raw: unknown) {
     await updateProfileForUser(user.id, parsed.data);
     revalidatePath("/profile");
     return { ok: true, message: "个人资料已更新" };
-  } catch { return { ok: false, message: "保存失败" }; }
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error && error.message === "请先登录后再继续"
+        ? error.message
+        : "保存失败",
+    };
+  }
 }
 
 export async function markMessageRead(id: string) {

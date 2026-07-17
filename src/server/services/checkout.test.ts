@@ -44,6 +44,7 @@ const winningOrder = {
   id: "order-winning", orderNumber: "CB202607160001", userId: "user-1", totalAmount: 12800,
   payment: { giftCardAmount: 10000, externalAmount: 2800 },
 };
+const writeConflict = { code: "P2034", message: "Transaction failed due to a write conflict" };
 
 describe("checkoutForUser", () => {
   beforeEach(() => {
@@ -90,6 +91,41 @@ describe("checkoutForUser", () => {
     const result = await checkoutForUser("user-1", input);
     expect(result).toEqual({ created: false, result: { ok: false, message: "支付未完成，请稍后重试" } });
     expect(JSON.stringify(result)).not.toContain("database-secret");
+    expect(mocks.transaction).toHaveBeenCalledOnce();
+  });
+
+  it("retries a P2034 conflict and succeeds on the next transaction attempt", async () => {
+    mocks.orderFindUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+    mocks.transaction.mockRejectedValueOnce(writeConflict);
+
+    await expect(checkoutForUser("user-1", input)).resolves.toMatchObject({
+      created: true,
+      result: { ok: true, orderId: "order-new" },
+    });
+    expect(mocks.transaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns a same-token winner between P2034 retry attempts", async () => {
+    mocks.orderFindUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(winningOrder);
+    mocks.transaction.mockRejectedValueOnce(writeConflict);
+
+    await expect(checkoutForUser("user-1", input)).resolves.toEqual({
+      created: false,
+      result: { ok: true, orderId: "order-winning", orderNumber: "CB202607160001", totalAmount: 12800, giftCardAmount: 10000, externalAmount: 2800, demo: false },
+    });
+    expect(mocks.transaction).toHaveBeenCalledOnce();
+  });
+
+  it("stops after three P2034 attempts and returns a sanitized generic failure", async () => {
+    mocks.orderFindUnique.mockResolvedValue(null);
+    mocks.transaction.mockRejectedValue(writeConflict);
+
+    await expect(checkoutForUser("user-1", input)).resolves.toEqual({
+      created: false,
+      result: { ok: false, message: "支付未完成，请稍后重试" },
+    });
+    expect(mocks.transaction).toHaveBeenCalledTimes(3);
+    expect(mocks.orderFindUnique).toHaveBeenCalledTimes(4);
   });
 
   it("reads and prices products inside a serializable transaction", async () => {

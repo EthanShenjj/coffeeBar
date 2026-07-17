@@ -54,4 +54,12 @@ describe("updateProfile", () => {
     expect(result).toEqual({ ok: false, message: "保存失败" });
     expect(JSON.stringify(result)).not.toContain("database-secret");
   });
+
+  it("preserves the known expired-session login prompt", async () => {
+    mocks.requireUser.mockRejectedValueOnce(new Error("请先登录后再继续"));
+    await expect(updateProfile({ name: "林墨", phone: "13800138000", birthday: "" })).resolves.toEqual({
+      ok: false,
+      message: "请先登录后再继续",
+    });
+  });
 });

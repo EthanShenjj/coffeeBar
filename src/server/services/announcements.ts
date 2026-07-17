@@ -50,21 +50,23 @@ export async function getAnnouncementForUser(userId: string, announcementId: str
 }
 
 export async function markAnnouncementReadForUser(userId: string, announcementId: string) {
-  const announcement = await getDb().announcement.findFirst({
-    where: { id: announcementId, ...publishedWhere() },
-    select: { id: true },
-  });
-  if (!announcement) throw new ServiceNotFoundError("消息不存在");
-  try {
-    await getDb().messageReceipt.upsert({
-      where: { userId_announcementId: { userId, announcementId } },
-      create: { userId, announcementId },
-      update: { readAt: new Date() },
+  await getDb().$transaction(async (tx) => {
+    const announcement = await tx.announcement.findFirst({
+      where: { id: announcementId, ...publishedWhere() },
+      select: { id: true },
     });
-  } catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "P2003") {
-      throw new ServiceNotFoundError("消息不存在");
+    if (!announcement) throw new ServiceNotFoundError("消息不存在");
+    try {
+      await tx.messageReceipt.upsert({
+        where: { userId_announcementId: { userId, announcementId } },
+        create: { userId, announcementId },
+        update: { readAt: new Date() },
+      });
+    } catch (error) {
+      if (error && typeof error === "object" && "code" in error && error.code === "P2003") {
+        throw new ServiceNotFoundError("消息不存在");
+      }
+      throw error;
     }
-    throw error;
-  }
+  }, { isolationLevel: "Serializable" });
 }
