@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { getDb, hasDatabase } from "@/lib/db";
+import { hasDatabase } from "@/lib/db";
+import { markAnnouncementReadForUser } from "@/server/services/announcements";
+import { updateProfileForUser } from "@/server/services/profiles";
 
 const profileSchema = z.object({ name: z.string().trim().min(2).max(40), phone: z.string().regex(/^1\d{10}$/).or(z.literal("")), birthday: z.string().optional() });
 
@@ -13,7 +15,7 @@ export async function updateProfile(raw: unknown) {
   if (!hasDatabase()) return { ok: true, message: "演示模式：资料已在界面预览" };
   try {
     const user = await requireUser();
-    await getDb().user.update({ where: { id: user.id }, data: { name: parsed.data.name, profile: { upsert: { create: { phone: parsed.data.phone || null, birthday: parsed.data.birthday ? new Date(parsed.data.birthday) : null }, update: { phone: parsed.data.phone || null, birthday: parsed.data.birthday ? new Date(parsed.data.birthday) : null } } } } });
+    await updateProfileForUser(user.id, parsed.data);
     revalidatePath("/profile");
     return { ok: true, message: "个人资料已更新" };
   } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "保存失败" }; }
@@ -22,7 +24,7 @@ export async function updateProfile(raw: unknown) {
 export async function markMessageRead(id: string) {
   if (!hasDatabase()) return { ok: true };
   const user = await requireUser();
-  await getDb().messageReceipt.upsert({ where: { userId_announcementId: { userId: user.id, announcementId: id } }, create: { userId: user.id, announcementId: id }, update: { readAt: new Date() } });
+  await markAnnouncementReadForUser(user.id, id);
   revalidatePath("/messages");
   return { ok: true };
 }
