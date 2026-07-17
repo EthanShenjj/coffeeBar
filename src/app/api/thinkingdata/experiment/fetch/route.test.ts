@@ -46,4 +46,33 @@ describe("ThinkingData experiment fetch proxy", () => {
       cache: "no-store",
     }));
   });
+
+  it("rejects requests without an account or distinct identity", async () => {
+    process.env.THINKINGDATA_EXPERIMENT_FETCH_URL = "https://experiment.example.test/fetch?appid=app-1";
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+    const response = await POST(new Request("https://coffeebar.test/api/thinkingdata/experiment/fetch", {
+      method: "POST",
+      body: JSON.stringify({ "#feature_key": ["color"], "#lib": "tga_js_sdk" }),
+    }));
+
+    expect(response.status).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("deduplicates concurrent fetches with the same user and payload", async () => {
+    process.env.THINKINGDATA_EXPERIMENT_FETCH_URL = "https://experiment.example.test/fetch?appid=app-1";
+    let resolve!: (response: Response) => void;
+    const upstream = vi.fn(() => new Promise<Response>((done) => { resolve = done; }));
+    vi.stubGlobal("fetch", upstream);
+    const body = JSON.stringify({ "#distinct_id": "visitor-1", "#feature_key": ["color"], "#lib": "tga_js_sdk" });
+
+    const first = POST(new Request("https://coffeebar.test/api/thinkingdata/experiment/fetch", { method: "POST", body }));
+    const second = POST(new Request("https://coffeebar.test/api/thinkingdata/experiment/fetch", { method: "POST", body }));
+    await vi.waitFor(() => expect(upstream).toHaveBeenCalledOnce());
+    resolve(new Response(JSON.stringify({ color: "red" }), { status: 200 }));
+
+    expect((await first).status).toBe(200);
+    expect((await second).status).toBe(200);
+  });
 });

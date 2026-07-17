@@ -41,6 +41,7 @@ npm run dev
 - `NEXT_PUBLIC_MIXPANEL_PROJECT_TOKEN`: Mixpanel 项目的 Project Token，用于前端行为事件上报
 - `NEXT_PUBLIC_THINKINGDATA_APP_ID`: ThinkingData 项目的 App ID，用于前端行为事件上报
 - `NEXT_PUBLIC_THINKINGDATA_SERVER_URL`: ThinkingData 数据接收地址，例如 `https://ta-preview.thinkingdata.cn`
+- `NEXT_PUBLIC_APP_VERSION`: 传给 ThinkingData A/B 分流服务的 Web 应用版本
 - `THINKINGDATA_EXPERIMENT_FETCH_URL`: ThinkingData Web Experiment 远端分流 Fetch 完整地址；由实验服务提供方确认，未配置或请求失败时登录页使用原始文案
 - `THINKINGDATA_WEBHOOK_SECRET`: ThinkingData AE Webhook 通道鉴权密钥；配置后接口会校验 `X-AE-OPS-Signature` / `X-TE-OPS-Signature` 的 HmacSHA1 签名
 - `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`: 首次种子管理员，仅通过安全环境变量提供
@@ -72,10 +73,12 @@ npm run mobile:sync
 
 ## ThinkingData Web Experiment
 
-- 登录页请求 Feature Key `登录页注册引导文案`，请求体携带 SDK 当前的 `#account_id`、`#distinct_id`、`#feature_key` 与 `#lib`。
-- 浏览器通过 `/api/thinkingdata/experiment/fetch` 同源代理拉取远端分流结果；代理使用 `THINKINGDATA_EXPERIMENT_FETCH_URL`，单次 500 ms 超时，最多尝试 3 次。
-- 同时兼容 Feature 内嵌 `experiment_detail` 和顶层 `experiment_detail` 两种返回结构；值无效、服务未配置或请求失败时稳定回退原始登录文案。
-- 文案真正渲染后上报 `te_experiment_exposure`，包含 `#experiment_id`、`#experiment_group_id`、`#is_control_group`；同一浏览器按实验、组别和分流主体缓存 24 小时，避免重复曝光。
+- `src/lib/thinkingdata-ab-sdk.ts` 提供项目内通用 A/B SDK，支持自定义分流主体和请求参数、指定 Feature Key 拉取、String/Double/Boolean/JSON 类型读取及默认值。
+- `src/lib/thinkingdata-ab-server.ts` 提供服务端实时分流 SDK：500 ms 超时、最多 3 次尝试、同请求并发去重、仅手动曝光，以及默认 1440 分钟/10000 条曝光去重缓存。
+- 登录页已接入 Feature Key `登录页注册引导文案`；浏览器通过 `/api/thinkingdata/experiment/fetch` 同源代理请求，服务端单次超时 500 ms、最多尝试 3 次，并合并同一用户的并发请求。
+- 成功分流结果缓存 12 小时；同时兼容 Feature 内嵌和顶层 `experiment_detail`。远端不可用、结果无效或缓存过期时稳定使用业务默认值。
+- 自动曝光只在业务实际读取 Feature 后触发，也支持关闭自动曝光并调用 `expose(featureKey)`；同一分流主体、实验和组别 24 小时内只上报一次 `te_experiment_exposure`。
+- 接口、请求字段、缓存及客户端/服务端示例见 [`docs/thinkingdata-ab-sdk.md`](docs/thinkingdata-ab-sdk.md)。
 
 ThinkingData 的公开 JavaScript 与 Node.js 接入文档目前只覆盖数据采集 SDK，没有公布 Web Experiment Fetch 地址或鉴权格式。部署前需要由 ThinkingData 实验服务提供方确认 `THINKINGDATA_EXPERIMENT_FETCH_URL` 的完整值；不要用数据接收地址 `/sync_js` 代替实验 Fetch 地址。
 

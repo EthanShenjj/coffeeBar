@@ -35,9 +35,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   }, [mode]);
 
   useEffect(() => {
-    if (loginCopyEvaluation?.experiment) {
-      void exposeLoginCopyExperiment(loginCopyEvaluation.experiment);
-    }
+    if (loginCopyEvaluation?.experiment) exposeLoginCopyExperiment();
   }, [loginCopyEvaluation]);
 
   async function submit(event: React.FormEvent) {

@@ -205,11 +205,13 @@ export function trackThinkingDataExperimentExposure(detail: {
   experimentId: string;
   experimentGroupId: string;
   isControlGroup: boolean;
+  bucketId?: Record<string, unknown>;
 }) {
   trackThinkingData("te_experiment_exposure", {
     "#experiment_id": detail.experimentId,
     "#experiment_group_id": detail.experimentGroupId,
     "#is_control_group": detail.isControlGroup,
+    custom_bucket_id: detail.bucketId ? JSON.stringify(detail.bucketId) : undefined,
   });
 }
 
