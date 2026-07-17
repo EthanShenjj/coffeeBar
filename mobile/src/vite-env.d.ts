@@ -8,4 +8,5 @@ interface ImportMetaEnv {
   readonly VITE_THINKINGDATA_SERVER_URL?: string;
   readonly VITE_APP_VERSION?: string;
   readonly VITE_BUILD_NUMBER?: string;
+  readonly VITE_APNS_ENVIRONMENT?: "DEVELOPMENT" | "PRODUCTION";
 }

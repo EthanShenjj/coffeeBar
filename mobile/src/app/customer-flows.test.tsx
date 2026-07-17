@@ -31,6 +31,7 @@ function renderFlow(path: string, options: { auth?: AuthSnapshot; online?: boole
     api: rawApi, customerApi, network, catalogCache: createCatalogCache(window.localStorage),
     carts: { MENU: createCartStore("MENU", { storage: window.localStorage }), SHOP: createCartStore("SHOP", { storage: window.localStorage }) },
     consent: createAnalyticsConsentStore(window.localStorage), analytics: { track: vi.fn(async () => undefined) }, locale: createLocaleStore(window.localStorage),
+    native: { initialize: vi.fn(async () => async () => undefined), addedToCart: vi.fn(async () => undefined), orderSucceeded: vi.fn(async () => undefined), operationFailed: vi.fn(async () => undefined), requestPushAfterFirstOrder: vi.fn(async () => undefined) },
   };
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<AppServicesProvider value={services}><QueryClientProvider client={queryClient}><MemoryRouter initialEntries={[path]}><AppRoutes auth={auth} controller={controller} /></MemoryRouter></QueryClientProvider></AppServicesProvider>);
@@ -99,6 +100,8 @@ describe("mobile catalog, carts and checkout", () => {
     resolve({ ok: true, orderId: "o1", orderNumber: "CB001", totalAmount: 3200, giftCardAmount: 0, externalAmount: 3200, demo: true });
     expect(await screen.findByRole("heading", { name: "下单成功" })).toBeInTheDocument();
     expect(services.carts.MENU.getState().items).toHaveLength(0);
+    expect(services.native?.orderSucceeded).toHaveBeenCalledOnce();
+    expect(services.native?.requestPushAfterFirstOrder).toHaveBeenCalledOnce();
   });
 
   it("shows actionable conflict copy and retains the cart", async () => {

@@ -18,6 +18,7 @@
     "mobile:test": "npm --workspace @coffeebar/mobile run test",
     "mobile:typecheck": "npm --workspace @coffeebar/mobile run typecheck",
     "mobile:build": "npm --workspace @coffeebar/mobile run build",
+    "mobile:sync": "npm run mobile:build && npm --workspace @coffeebar/mobile run cap:sync",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:generate": "prisma generate",

@@ -8,8 +8,10 @@ import {
   orderDetailSchema,
   orderSummarySchema,
   profileDashboardSchema,
+  pushTokenRegistrationResultSchema,
   type CheckoutRequestInput,
   type GiftCardRechargeInput,
+  type PushTokenRegistration,
 } from "@coffeebar/contracts";
 import { z } from "zod";
 import type { ApiClient } from "./api-client";
@@ -37,6 +39,10 @@ export function createCustomerApi(api: ApiClient, network: ReturnType<typeof cre
     markAnnouncementRead(id: string) {
       network.getState().requireOnline("mark-read");
       return api.post(`/api/v1/me/messages/${encodeURIComponent(id)}/read`, undefined, { schema: readResultSchema });
+    },
+    registerPushToken(input: PushTokenRegistration) {
+      network.getState().requireOnline("push-token");
+      return api.put("/api/v1/me/push-tokens", input, { schema: pushTokenRegistrationResultSchema });
     },
   };
 }

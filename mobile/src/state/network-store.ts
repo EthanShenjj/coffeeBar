@@ -2,7 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { Network } from "@capacitor/network";
 import { createStore } from "zustand/vanilla";
 
-export type OnlineOperation = "checkout" | "recharge" | "mark-read";
+export type OnlineOperation = "checkout" | "recharge" | "mark-read" | "push-token";
 
 export class OfflineOperationError extends Error {
   readonly code = "OFFLINE";

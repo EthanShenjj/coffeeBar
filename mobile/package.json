@@ -6,13 +6,22 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "cap:sync": "cap sync ios",
+    "cap:copy": "cap copy ios",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run"
   },
   "dependencies": {
     "@amplitude/analytics-browser": "^2.45.1",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.0.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.4.2",
+    "@capacitor/keyboard": "^8.0.5",
     "@capacitor/network": "^8.0.0",
+    "@capacitor/push-notifications": "^8.1.2",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3",
     "@coffeebar/contracts": "*",
     "@tanstack/react-query": "^5.90.0",
     "mixpanel-browser": "^2.81.0",
@@ -23,6 +32,7 @@
     "zustand": "5.0.14"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.2",
     "@tailwindcss/vite": "^4.1.0",
     "@testing-library/jest-dom": "^6.9.0",
     "@testing-library/react": "^16.3.0",

@@ -84,7 +84,7 @@ function HomePage() {
 }
 
 function ProductConfigurator({ product, kind, onClose }: { product: ProductView; kind: CartKind; onClose(): void }) {
-  const { carts, analytics } = useAppServices();
+  const { carts, analytics, native } = useAppServices();
   const { locale, t } = useLocale();
   const navigate = useNavigate();
   const defaults = useMemo(() => product.optionGroups.flatMap((g) => g.options.filter((o) => o.isDefault).map((o) => o.id)), [product]);
@@ -112,9 +112,10 @@ function ProductConfigurator({ product, kind, onClose }: { product: ProductView;
       } else {
         carts[kind].getState().addItem(product, selected);
         void analytics.track("add_to_cart", { product_id: product.id, product_channel: kind });
+        void native?.addedToCart();
         onClose();
       }
-    } catch (cause) { setError(t(cause instanceof Error ? cause.message : "请选择商品规格")); }
+    } catch (cause) { setError(t(cause instanceof Error ? cause.message : "请选择商品规格")); void native?.operationFailed(); }
   }
   return <section className="configurator" aria-label={`${t(product.name)} ${t("规格")}`}><button className="close" onClick={onClose} aria-label={t("关闭")}>×</button><h2>{t(product.name)}</h2><p>{t(product.description)}</p>
     {product.optionGroups.map((group) => <fieldset key={group.id}><legend>{t(group.name)}{group.required ? " *" : ""} <small>{t("最多 {count} 项", { count: group.maxSelect })}</small></legend>{group.options.map((option) => <label className="option" key={option.id}><input type={group.maxSelect === 1 ? "radio" : "checkbox"} name={group.id} checked={selected.includes(option.id)} onChange={() => toggle(group, option.id)} />{t(option.name)}<span>{option.priceDelta ? `+${money(option.priceDelta, locale)}` : ""}</span></label>)}</fieldset>)}
@@ -200,7 +201,9 @@ function CheckoutPage() {
         services.carts[kind].getState().clear();
       }
       void services.analytics.track("order_payment_succeeded", { order_id: response.orderId, order_amount_cents: response.totalAmount });
-    } catch { void services.analytics.track("order_payment_failed", { product_channel: kind }); } finally { submitInFlight.current = false; }
+      void services.native?.orderSucceeded();
+      void services.native?.requestPushAfterFirstOrder();
+    } catch { void services.analytics.track("order_payment_failed", { product_channel: kind }); void services.native?.operationFailed(); } finally { submitInFlight.current = false; }
   }
   if (result) return <main id="main-content" className="page success"><p className="success-mark">✓</p><h1>{t("下单成功")}</h1><p>{t("订单号")} {result.orderNumber}</p><Link className="button" to={`/orders/${result.orderId}`}>{t("查看订单")}</Link></main>;
   const conflict = mutation.error instanceof ApiClientError && mutation.error.code === "CONFLICT";
@@ -275,7 +278,7 @@ function OrderPage() {
 function GiftCardPage() {
   const services = useAppServices(); const { c, locale, t } = useLocale(); const network = useStore(services.network); const client = useQueryClient();
   const query = useQuery({ queryKey: ["gift-card"], queryFn: services.customerApi.giftCard, meta: { sensitive: true } });
-  const [token, setToken] = useState(() => crypto.randomUUID()); const recharge = useMutation({ mutationFn: (amount: 10000 | 20000 | 30000 | 50000) => services.customerApi.recharge({ token, amount }), onSuccess: async () => { setToken(crypto.randomUUID()); await client.invalidateQueries({ queryKey: ["gift-card"] }); } });
+  const [token, setToken] = useState(() => crypto.randomUUID()); const recharge = useMutation({ mutationFn: (amount: 10000 | 20000 | 30000 | 50000) => services.customerApi.recharge({ token, amount }), onSuccess: async () => { setToken(crypto.randomUUID()); void services.native?.orderSucceeded(); await client.invalidateQueries({ queryKey: ["gift-card"] }); }, onError: () => { void services.native?.operationFailed(); } });
   return <main id="main-content" className="page"><h1>{c.gift}</h1><QueryState pending={query.isPending} error={query.error}>{query.data && <><section className="gift-card"><small>BALANCE</small><strong>{money(query.data.balance, locale)}</strong></section><h2>{t("模拟充值")}</h2>{!network.online && <p role="alert">{t("网络恢复后才能充值。")}</p>}<div className="amounts">{([10000, 20000, 30000, 50000] as const).map((amount) => <button key={amount} disabled={!network.online || recharge.isPending} onClick={() => recharge.mutate(amount)}>{money(amount, locale)}</button>)}</div>{recharge.isSuccess && <p role="status">{t("充值成功。")}</p>}{recharge.error && <p role="alert">{t("充值失败，请稍后重试。")}</p>}<h2>{t("交易记录")}</h2><div className="list">{query.data.transactions.map((item) => <article className="transaction" key={item.id}><div><strong>{t(item.type)}</strong><time>{dateTime(item.createdAt, locale)}</time></div><span>{item.amount >= 0 ? "+" : ""}{money(item.amount, locale)}</span></article>)}</div></>}</QueryState></main>;
 }
 

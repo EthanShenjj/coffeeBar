@@ -7,6 +7,7 @@ import type { createNetworkStore } from "../state/network-store";
 import type { AnalyticsConsentStore } from "../analytics/consent-store";
 import type { MobileAnalytics } from "../analytics/mobile-analytics";
 import type { LocaleStore } from "../state/locale-store";
+import type { NativeExperience } from "../native/native-experience";
 
 export type AppServices = {
   api: ApiClient;
@@ -17,6 +18,7 @@ export type AppServices = {
   consent: AnalyticsConsentStore;
   analytics: MobileAnalytics;
   locale: LocaleStore;
+  native?: NativeExperience;
 };
 
 const ServicesContext = createContext<AppServices | null>(null);

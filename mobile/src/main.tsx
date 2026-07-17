@@ -13,17 +13,24 @@ import { createCartStore } from "./state/cart-store";
 import { createAnalyticsConsentStore } from "./analytics/consent-store";
 import { browserAnalyticsVendors, createMobileAnalytics } from "./analytics/mobile-analytics";
 import { createLocaleStore } from "./state/locale-store";
+import { getInstallationDeviceId } from "./config/device-id";
+import { createNativeExperience } from "./native/native-experience";
 import "./styles.css";
 
+const localStorage = getSafeLocalStorage();
+const deviceId = getInstallationDeviceId(localStorage);
 const apiBaseUrl = resolveApiBaseUrl({
   configured: import.meta.env.VITE_API_BASE_URL,
   fallbackOrigin: window.location.origin,
   native: Capacitor.isNativePlatform(),
   production: import.meta.env.PROD,
 });
-export const mobileRuntime = createMobileRuntime({ apiBaseUrl });
+function browserNavigate(path: string) {
+  window.history.pushState(null, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+export const mobileRuntime = createMobileRuntime({ apiBaseUrl, deviceId, navigate: browserNavigate });
 const { auth, queryClient } = mobileRuntime;
-const localStorage = getSafeLocalStorage();
 const catalogCache = createCatalogCache(localStorage);
 const network = createNetworkStore({
   initialOnline: navigator.onLine,
@@ -45,15 +52,27 @@ const analytics = createMobileAnalytics({
   appVersion: import.meta.env.VITE_APP_VERSION ?? "0.0.0",
   buildNumber: import.meta.env.VITE_BUILD_NUMBER ?? "0",
 });
+const customerApi = createCustomerApi(mobileRuntime.api, network);
+const native = createNativeExperience({
+  native: Capacitor.isNativePlatform(),
+  api: customerApi,
+  analytics,
+  storage: localStorage,
+  deviceId,
+  environment: import.meta.env.VITE_APNS_ENVIRONMENT === "PRODUCTION" ? "PRODUCTION" : "DEVELOPMENT",
+  navigate: browserNavigate,
+  canRegisterPush: () => auth.getSnapshot().status === "authenticated",
+});
 const services = {
   api: mobileRuntime.api,
-  customerApi: createCustomerApi(mobileRuntime.api, network),
+  customerApi,
   catalogCache,
   network,
   carts: { MENU: createCartStore("MENU", { storage: localStorage }), SHOP: createCartStore("SHOP", { storage: localStorage }) },
   consent,
   analytics,
   locale: createLocaleStore(localStorage),
+  native,
 };
 
 async function bootstrap() {
@@ -66,12 +85,16 @@ async function bootstrap() {
   const root = document.getElementById("root");
   if (!root) throw new Error("Mobile root element missing");
   createRoot(root).render(<StrictMode><Root auth={auth} queryClient={queryClient} services={services} /></StrictMode>);
+  try { disposeNative = await native.initialize(); } catch { disposeNative = undefined; }
 }
 
 let disposeNetwork: (() => void) | undefined;
+let disposeNative: (() => Promise<void>) | undefined;
 export function disposeMobileApp() {
   disposeNetwork?.();
   disposeNetwork = undefined;
+  void disposeNative?.();
+  disposeNative = undefined;
 }
 
 void bootstrap();
