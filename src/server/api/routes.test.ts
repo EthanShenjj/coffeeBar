@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { UnauthorizedError } from "@/lib/auth";
 
 const mocks = vi.hoisted(() => ({
   hasDatabase: vi.fn(() => true),
@@ -59,6 +58,12 @@ function request(path: string, init?: RequestInit) {
   return new Request(`https://api.example.test${path}`, init);
 }
 
+function bearerRequest(path: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers);
+  headers.set("authorization", "Bearer mobile-session-token");
+  return request(path, { ...init, headers });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.hasDatabase.mockReturnValue(true);
@@ -88,6 +93,23 @@ describe("/api/v1 customer routes", () => {
     } });
   });
 
+  it("fails app-config closed in production without a database", async () => {
+    mocks.hasDatabase.mockReturnValue(false);
+    vi.stubEnv("NODE_ENV", "production");
+    const response = await getAppConfig(request("/api/v1/app-config"));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "SERVICE_UNAVAILABLE" } });
+  });
+
+  it("returns a sanitized server error for invalid app-config output", async () => {
+    process.env.MINIMUM_IOS_VERSION = "not-a-version postgres-password=secret";
+    const response = await getAppConfig(request("/api/v1/app-config"));
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body).toEqual({ error: { code: "INTERNAL_ERROR", message: "服务器暂时无法处理请求" } });
+    expect(JSON.stringify(body)).not.toContain("secret");
+  });
+
   it("applies CORS to actual routes and preflight", async () => {
     mocks.getProducts.mockResolvedValue([product]);
     const allowed = await getCatalog(request("/api/v1/catalog?channel=MENU", { headers: { origin: "capacitor://localhost" } }));
@@ -104,10 +126,19 @@ describe("/api/v1 customer routes", () => {
     const invalid = await getCatalog(request("/api/v1/catalog?channel=ADMIN"));
     expect(invalid.status).toBe(400);
     mocks.hasDatabase.mockReturnValue(false);
+    vi.stubEnv("NODE_ENV", "development");
     mocks.getProducts.mockResolvedValue([product]);
     const demo = await getCatalog(request("/api/v1/catalog?channel=MENU"));
     expect(demo.status).toBe(200);
     await expect(demo.json()).resolves.toEqual({ data: [product] });
+  });
+
+  it("fails public no-database requests closed outside development", async () => {
+    mocks.hasDatabase.mockReturnValue(false);
+    vi.stubEnv("NODE_ENV", "test");
+    const response = await getCatalog(request("/api/v1/catalog?channel=MENU"));
+    expect(response.status).toBe(503);
+    expect(mocks.getProducts).not.toHaveBeenCalled();
   });
 
   it("fails closed instead of returning demo state in production", async () => {
@@ -130,12 +161,35 @@ describe("/api/v1 customer routes", () => {
     expect(mocks.getAnnouncement).toHaveBeenCalledWith(null, "a1");
   });
 
-  it("returns 401 before calling authenticated services", async () => {
-    mocks.requireUser.mockRejectedValueOnce(new UnauthorizedError());
-    const response = await getDashboard(request("/api/v1/me/dashboard"));
+  it("rejects cookie-only no-Origin requests before calling Better Auth", async () => {
+    const response = await getDashboard(request("/api/v1/me/dashboard", {
+      headers: { cookie: "better-auth.session_token=valid-web-cookie" },
+    }));
     expect(response.status).toBe(401);
+    expect(mocks.requireUser).not.toHaveBeenCalled();
+    expect(mocks.getDashboard).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed authorization schemes before calling Better Auth", async () => {
+    const response = await getDashboard(request("/api/v1/me/dashboard", {
+      headers: { authorization: "Basic abc123" },
+    }));
+    expect(response.status).toBe(401);
+    expect(mocks.requireUser).not.toHaveBeenCalled();
     expect(mocks.getDashboard).not.toHaveBeenCalled();
     expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("passes a valid Bearer request to Better Auth", async () => {
+    mocks.getDashboard.mockResolvedValue({ user: { name: "Lin", email: "lin@example.test", role: "CUSTOMER" } });
+    const response = await getDashboard(bearerRequest("/api/v1/me/dashboard", {
+      headers: { cookie: "better-auth.session_token=valid-web-cookie" },
+    }));
+    expect(response.status).toBe(200);
+    expect(mocks.requireUser).toHaveBeenCalledOnce();
+    const authHeaders = mocks.requireUser.mock.calls[0]?.[0] as Headers;
+    expect(authHeaders.get("authorization")).toBe("Bearer mobile-session-token");
+    expect(authHeaders.get("cookie")).toBeNull();
   });
 
   it("returns 503 for authenticated endpoints without a database", async () => {
@@ -147,7 +201,7 @@ describe("/api/v1 customer routes", () => {
 
   it("returns 404 when an order is not owned by the authenticated user", async () => {
     mocks.getOrder.mockResolvedValue(null);
-    const response = await getOrder(request("/api/v1/me/orders/order-2"), { params: Promise.resolve({ id: "order-2" }) });
+    const response = await getOrder(bearerRequest("/api/v1/me/orders/order-2"), { params: Promise.resolve({ id: "order-2" }) });
     expect(response.status).toBe(404);
     expect(mocks.getOrder).toHaveBeenCalledWith("user-1", "order-2");
   });
@@ -155,17 +209,17 @@ describe("/api/v1 customer routes", () => {
   it("delegates authenticated read and read-receipt routes", async () => {
     mocks.getDashboard.mockResolvedValue({ user: { name: "Lin", email: "lin@example.test", role: "CUSTOMER" } });
     mocks.getGiftCard.mockResolvedValue({ balance: 0, transactions: [], persistent: true });
-    expect((await getDashboard(request("/api/v1/me/dashboard"))).status).toBe(200);
-    expect((await getGiftCard(request("/api/v1/me/gift-card"))).status).toBe(200);
-    const readResponse = await markRead(request("/api/v1/me/messages/a1/read", { method: "POST" }), { params: Promise.resolve({ id: "a1" }) });
+    expect((await getDashboard(bearerRequest("/api/v1/me/dashboard"))).status).toBe(200);
+    expect((await getGiftCard(bearerRequest("/api/v1/me/gift-card"))).status).toBe(200);
+    const readResponse = await markRead(bearerRequest("/api/v1/me/messages/a1/read", { method: "POST" }), { params: Promise.resolve({ id: "a1" }) });
     await expect(readResponse.json()).resolves.toEqual({ data: { read: true } });
     expect(mocks.markRead).toHaveBeenCalledWith("user-1", "a1");
   });
 
   it("rejects malformed and schema-invalid checkout bodies", async () => {
-    const malformed = await checkout(request("/api/v1/checkout", { method: "POST", body: "{" }));
+    const malformed = await checkout(bearerRequest("/api/v1/checkout", { method: "POST", body: "{" }));
     expect(malformed.status).toBe(400);
-    const invalid = await checkout(request("/api/v1/checkout", {
+    const invalid = await checkout(bearerRequest("/api/v1/checkout", {
       method: "POST", body: JSON.stringify({ kind: "MENU", items: [] }),
     }));
     expect(invalid.status).toBe(400);
@@ -180,17 +234,17 @@ describe("/api/v1 customer routes", () => {
     };
     const result = { ok: true, orderId: "o1", orderNumber: "CB1", totalAmount: 1500, giftCardAmount: 0, externalAmount: 1500, demo: false };
     mocks.checkout.mockResolvedValueOnce({ result, created: true });
-    const success = await checkout(request("/api/v1/checkout", { method: "POST", body: JSON.stringify(body) }));
+    const success = await checkout(bearerRequest("/api/v1/checkout", { method: "POST", body: JSON.stringify(body) }));
     await expect(success.json()).resolves.toEqual({ data: result });
     mocks.checkout.mockResolvedValueOnce({ result: { ok: false, message: "Latte库存不足" }, created: false });
-    const conflict = await checkout(request("/api/v1/checkout", { method: "POST", body: JSON.stringify(body) }));
+    const conflict = await checkout(bearerRequest("/api/v1/checkout", { method: "POST", body: JSON.stringify(body) }));
     expect(conflict.status).toBe(409);
     await expect(conflict.json()).resolves.toEqual({ error: { code: "CONFLICT", message: "商品库存不足，请刷新后重试" } });
   });
 
   it("does not leak unexpected checkout errors", async () => {
     mocks.checkout.mockRejectedValueOnce(new Error("postgres password=secret"));
-    const response = await checkout(request("/api/v1/checkout", {
+    const response = await checkout(bearerRequest("/api/v1/checkout", {
       method: "POST",
       body: JSON.stringify({
         token: "00000000-0000-4000-8000-000000000001", kind: "MENU", pickupName: "Lin Mo",
@@ -204,7 +258,7 @@ describe("/api/v1 customer routes", () => {
 
   it("returns the recharge idempotency result", async () => {
     mocks.recharge.mockResolvedValue({ ok: true, balance: 20_000, idempotent: true });
-    const response = await recharge(request("/api/v1/gift-card/recharges", {
+    const response = await recharge(bearerRequest("/api/v1/gift-card/recharges", {
       method: "POST",
       body: JSON.stringify({ token: "00000000-0000-4000-8000-000000000001", amount: 10_000 }),
     }));

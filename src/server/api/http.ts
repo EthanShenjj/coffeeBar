@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ApiErrorCode } from "@coffeebar/contracts";
-import { buildTrustedOrigins, UnauthorizedError } from "@/lib/auth";
+import { buildTrustedOrigins, requireUserFromHeaders, UnauthorizedError } from "@/lib/auth";
 import { hasDatabase } from "@/lib/db";
 import { ServiceNotFoundError } from "@/server/services/errors";
 
@@ -38,14 +38,33 @@ export class ApiServiceUnavailableError extends Error {
   }
 }
 
+export class ApiOutputValidationError extends Error {
+  constructor() {
+    super("API output validation failed");
+    this.name = "ApiOutputValidationError";
+  }
+}
+
 export function assertCustomerDatabaseAvailable(input: {
   available: boolean;
   nodeEnv: string | undefined;
   access: "public" | "authenticated";
 }) {
-  if (!input.available && (input.nodeEnv === "production" || input.access === "authenticated")) {
+  if (!input.available && !(input.nodeEnv === "development" && input.access === "public")) {
     throw new ApiServiceUnavailableError();
   }
+}
+
+export function assertBearerAuthorization(headers: Headers) {
+  const authorization = headers.get("authorization");
+  if (!authorization || !/^Bearer [^\s]+$/.test(authorization)) throw new UnauthorizedError();
+}
+
+export function requireBearerUserFromHeaders(headers: Headers) {
+  assertBearerAuthorization(headers);
+  const bearerOnlyHeaders = new Headers(headers);
+  bearerOnlyHeaders.delete("cookie");
+  return requireUserFromHeaders(bearerOnlyHeaders);
 }
 
 export type MappedApiError = {
@@ -157,20 +176,25 @@ export async function parseJson<T>(request: Request, schema: z.ZodType<T>): Prom
   return schema.parse(value);
 }
 
+export function validateApiOutput<T>(schema: z.ZodType<T>, value: unknown): T {
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) throw new ApiOutputValidationError();
+  return parsed.data;
+}
+
 export async function executeApi<T>(
   request: Request,
-  options: { access: "none" | "public" | "authenticated" },
+  options: { access: "public" | "authenticated" },
   operation: () => Promise<T> | T,
 ) {
   try {
     if (!corsHeadersForRequest(request).allowed) throw new ApiForbiddenError();
-    if (options.access !== "none") {
-      assertCustomerDatabaseAvailable({
-        available: hasDatabase(),
-        nodeEnv: process.env.NODE_ENV,
-        access: options.access,
-      });
-    }
+    assertCustomerDatabaseAvailable({
+      available: hasDatabase(),
+      nodeEnv: process.env.NODE_ENV,
+      access: options.access,
+    });
+    if (options.access === "authenticated") assertBearerAuthorization(request.headers);
     return apiSuccessResponse(await operation(), request);
   } catch (error) {
     return apiErrorResponse(error, request);

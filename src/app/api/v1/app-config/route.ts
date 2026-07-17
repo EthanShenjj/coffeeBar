@@ -1,5 +1,5 @@
-import type { AppConfig } from "@coffeebar/contracts";
-import { executeApi, routeOptions } from "@/server/api/http";
+import { appConfigSchema } from "@coffeebar/contracts";
+import { executeApi, routeOptions, validateApiOutput } from "@/server/api/http";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,15 +14,14 @@ function appBaseUrl() {
 }
 
 export function GET(request: Request) {
-  return executeApi(request, { access: "none" }, () => {
+  return executeApi(request, { access: "public" }, () => {
     const base = appBaseUrl();
-    const config: AppConfig = {
+    return validateApiOutput(appConfigSchema, {
       minimumIosVersion: process.env.MINIMUM_IOS_VERSION ?? "1.0.0",
       maintenance: process.env.APP_MAINTENANCE_MODE === "true",
       privacyUrl: new URL("/privacy", base).toString(),
       supportUrl: new URL("/support", base).toString(),
       apiVersion: "v1",
-    };
-    return config;
+    });
   });
 }

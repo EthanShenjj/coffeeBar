@@ -5,6 +5,7 @@ import { ServiceNotFoundError } from "@/server/services/errors";
 import {
   ApiConflictError,
   ApiServiceUnavailableError,
+  ApiOutputValidationError,
   assertCustomerDatabaseAvailable,
   apiErrorResponse,
   apiSuccessResponse,
@@ -12,6 +13,7 @@ import {
   handleOptions,
   mapApiError,
   parseJson,
+  validateApiOutput,
 } from "@/server/api/http";
 
 const env = {
@@ -106,7 +108,28 @@ describe("customer API HTTP helpers", () => {
       .toThrow(ApiServiceUnavailableError);
     expect(() => assertCustomerDatabaseAvailable({ available: false, nodeEnv: "development", access: "public" }))
       .not.toThrow();
+    expect(() => assertCustomerDatabaseAvailable({ available: false, nodeEnv: "test", access: "public" }))
+      .toThrow(ApiServiceUnavailableError);
+    expect(() => assertCustomerDatabaseAvailable({ available: false, nodeEnv: "preview", access: "public" }))
+      .toThrow(ApiServiceUnavailableError);
     expect(() => assertCustomerDatabaseAvailable({ available: true, nodeEnv: "production", access: "authenticated" }))
       .not.toThrow();
+  });
+
+  it("validates adapter output without misreporting server data as a client error", () => {
+    const schema = z.object({ version: z.string().regex(/^\d+\.\d+\.\d+$/) }).strict();
+    expect(validateApiOutput(schema, { version: "1.2.3" })).toEqual({ version: "1.2.3" });
+    let error: unknown;
+    try {
+      validateApiOutput(schema, { version: "database-secret" });
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).toBeInstanceOf(ApiOutputValidationError);
+    expect(mapApiError(error)).toEqual({
+      status: 500,
+      error: { code: "INTERNAL_ERROR", message: "服务器暂时无法处理请求" },
+    });
+    expect(JSON.stringify(mapApiError(error))).not.toContain("database-secret");
   });
 });
