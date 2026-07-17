@@ -10,6 +10,19 @@ import {
 type OrderNotification = OrderPushPayload & { userId: string };
 type SafeLogger = { warn(message: string, metadata: Record<string, string | number>): void };
 
+async function runWithConcurrency<T>(items: T[], limit: number, worker: (item: T) => Promise<void>) {
+  let nextIndex = 0;
+  async function consume() {
+    while (nextIndex < items.length) {
+      const item = items[nextIndex];
+      nextIndex += 1;
+      await worker(item);
+    }
+  }
+  const workerCount = Math.min(limit, items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => consume()));
+}
+
 export async function notifyOrderStatus(
   input: OrderNotification,
   dependencies: {
@@ -32,13 +45,14 @@ export async function notifyOrderStatus(
     tokens = await getDb().devicePushToken.findMany({
       where: { userId: input.userId, environment: config.environment, disabledAt: null },
       select: { id: true, token: true },
+      take: 10,
     });
   } catch {
     logger.warn("APNs notification skipped", { orderId: input.orderId, category: "persistence" });
     return;
   }
 
-  await Promise.all(tokens.map(async (token) => {
+  await runWithConcurrency(tokens, 3, async (token) => {
     try {
       const result = await sendApnsNotification(
         config,
@@ -59,5 +73,5 @@ export async function notifyOrderStatus(
     } catch {
       logger.warn("APNs notification failed", { orderId: input.orderId, category: "transport" });
     }
-  }));
+  });
 }

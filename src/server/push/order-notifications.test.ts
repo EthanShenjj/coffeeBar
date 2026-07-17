@@ -48,4 +48,30 @@ describe("order push notifications", () => {
     expect(JSON.stringify(mocks.warn.mock.calls)).not.toContain("secret");
     expect(JSON.stringify(mocks.warn.mock.calls)).not.toContain("sensitive-device-token");
   });
+
+  it("queries at most ten active devices and sends with concurrency three", async () => {
+    const tokens = Array.from({ length: 8 }, (_, index) => ({ id: `push-${index}`, token: `token-${index}` }));
+    mocks.findMany.mockResolvedValue(tokens);
+    let active = 0;
+    let maximumActive = 0;
+    mocks.send.mockImplementation(async () => {
+      active += 1;
+      maximumActive = Math.max(maximumActive, active);
+      await new Promise<void>((resolve) => setTimeout(resolve, 1));
+      active -= 1;
+      return { ok: true, status: 200, invalidToken: false };
+    });
+
+    await notifyOrderStatus({
+      userId: "user-1", orderId: "order-1", orderNumber: "CB0001", status: "READY",
+    }, { env, logger: { warn: mocks.warn }, transport: { send: vi.fn() } });
+
+    expect(mocks.findMany).toHaveBeenCalledWith({
+      where: { userId: "user-1", environment: "DEVELOPMENT", disabledAt: null },
+      select: { id: true, token: true },
+      take: 10,
+    });
+    expect(mocks.send).toHaveBeenCalledTimes(8);
+    expect(maximumActive).toBe(3);
+  });
 });

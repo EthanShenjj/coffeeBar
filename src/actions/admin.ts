@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { PRODUCT_CATALOG_CACHE_TAG } from "@/lib/cache-tags";
@@ -14,16 +15,18 @@ export async function advanceOrder(orderId: string, status: "PREPARING" | "READY
     data: { status },
     select: { id: true, userId: true, orderNumber: true, status: true },
   });
-  try {
-    await notifyOrderStatus({
-      userId: order.userId,
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      status: order.status as typeof status,
-    });
-  } catch {
-    // Order fulfillment must not be rolled back by an optional notification.
-  }
+  after(async () => {
+    try {
+      await notifyOrderStatus({
+        userId: order.userId,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status as typeof status,
+      });
+    } catch {
+      // Order fulfillment must not be rolled back by an optional notification.
+    }
+  });
   revalidatePath("/admin");
 }
 export async function toggleProduct(productId: string, isAvailable: boolean) { await requireAdmin(); await getDb().product.update({ where: { id: productId }, data: { isAvailable } }); updateTag(PRODUCT_CATALOG_CACHE_TAG); revalidatePath("/admin"); revalidatePath("/menu"); revalidatePath("/shop"); }

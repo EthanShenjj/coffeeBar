@@ -1,4 +1,5 @@
 import { connect, constants } from "node:http2";
+import { createHash } from "node:crypto";
 import { importPKCS8, SignJWT } from "jose";
 
 export type ApnsEnvironment = "DEVELOPMENT" | "PRODUCTION";
@@ -73,6 +74,34 @@ export async function createApnsProviderToken(config: ApnsConfig, now = new Date
     .sign(key);
 }
 
+const PROVIDER_TOKEN_CACHE_MS = 50 * 60_000;
+const providerTokenCache = new Map<string, { issuedAt: number; token: Promise<string> }>();
+
+function providerTokenCacheKey(config: ApnsConfig) {
+  return createHash("sha256").update(JSON.stringify({
+    teamId: config.teamId,
+    keyId: config.keyId,
+    privateKey: config.privateKey,
+    bundleId: config.bundleId,
+    environment: config.environment,
+  })).digest("hex");
+}
+
+export function getCachedApnsProviderToken(config: ApnsConfig, now = new Date()) {
+  const cacheKey = providerTokenCacheKey(config);
+  const nowMs = now.getTime();
+  const cached = providerTokenCache.get(cacheKey);
+  if (cached && nowMs >= cached.issuedAt && nowMs - cached.issuedAt < PROVIDER_TOKEN_CACHE_MS) {
+    return cached.token;
+  }
+  const token = createApnsProviderToken(config, now);
+  providerTokenCache.set(cacheKey, { issuedAt: nowMs, token });
+  void token.catch(() => {
+    if (providerTokenCache.get(cacheKey)?.token === token) providerTokenCache.delete(cacheKey);
+  });
+  return token;
+}
+
 export type OrderPushPayload = {
   orderId: string;
   orderNumber: string;
@@ -90,7 +119,7 @@ export async function createApnsRequest(
   deviceToken: string,
   payload: OrderPushPayload,
 ): Promise<ApnsRequest> {
-  const authorization = await createApnsProviderToken(config);
+  const authorization = await getCachedApnsProviderToken(config);
   return {
     host: config.host,
     path: `/3/device/${deviceToken}`,
@@ -146,41 +175,88 @@ export async function sendApnsNotification(
   };
 }
 
-export const nodeApnsTransport: ApnsTransport = {
-  send(request) {
+type ApnsHttp2Stream = {
+  setEncoding(encoding: string): unknown;
+  on(event: "response", listener: (headers: Record<string, unknown>) => void): unknown;
+  on(event: "data", listener: (chunk: string) => void): unknown;
+  once(event: "end" | "error", listener: () => void): unknown;
+  end(body: string): unknown;
+  close(): unknown;
+  destroy(): unknown;
+};
+
+type ApnsHttp2Session = {
+  once(event: "error", listener: () => void): unknown;
+  request(headers: Record<string, string>): ApnsHttp2Stream;
+  close(): unknown;
+  destroy(): unknown;
+};
+
+type NodeApnsTransportDependencies = {
+  connect(authority: string): ApnsHttp2Session;
+  scheduleTimeout(callback: () => void, timeoutMs: number): unknown;
+  cancelTimeout(handle: unknown): void;
+};
+
+const defaultTransportDependencies: NodeApnsTransportDependencies = {
+  connect: (authority) => connect(authority) as unknown as ApnsHttp2Session,
+  scheduleTimeout: (callback, timeoutMs) => setTimeout(callback, timeoutMs),
+  cancelTimeout: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+};
+
+export function createNodeApnsTransport(
+  dependencies: NodeApnsTransportDependencies = defaultTransportDependencies,
+): ApnsTransport {
+  return { send(request) {
     return new Promise((resolve, reject) => {
-      const client = connect(`https://${request.host}`);
+      let client: ApnsHttp2Session | undefined;
+      let stream: ApnsHttp2Stream | undefined;
+      let timer: unknown;
       let settled = false;
-      const finish = (result: ApnsResponse | Error) => {
+      const finish = (result: ApnsResponse | Error, destroy: boolean) => {
         if (settled) return;
         settled = true;
-        clearTimeout(timer);
-        client.close();
+        try {
+          if (timer !== undefined) dependencies.cancelTimeout(timer);
+        } catch {
+          // Cleanup errors must not change the transport result.
+        }
+        if (destroy) {
+          try { stream?.destroy(); } catch { /* continue closing the session */ }
+          try { client?.destroy(); } catch { /* settle below */ }
+        } else {
+          try { stream?.close(); } catch { /* continue closing the session */ }
+          try { client?.close(); } catch { /* settle below */ }
+        }
         if (result instanceof Error) reject(new Error("APNs transport failed"));
         else resolve(result);
       };
-      const timer = setTimeout(() => {
-        client.destroy();
-        finish(new Error("timeout"));
-      }, request.timeoutMs);
-      client.once("error", () => finish(new Error("connection")));
-      const stream = client.request({
-        [constants.HTTP2_HEADER_METHOD]: "POST",
-        [constants.HTTP2_HEADER_PATH]: request.path,
-        ...request.headers,
-      });
-      let status = 0;
-      let body = "";
-      stream.setEncoding("utf8");
-      stream.on("response", (headers) => {
-        status = Number(headers[constants.HTTP2_HEADER_STATUS] ?? 0);
-      });
-      stream.on("data", (chunk: string) => {
-        if (body.length < 8192) body += chunk.slice(0, 8192 - body.length);
-      });
-      stream.once("end", () => finish({ status, body }));
-      stream.once("error", () => finish(new Error("stream")));
-      stream.end(request.body);
+      try {
+        client = dependencies.connect(`https://${request.host}`);
+        client.once("error", () => finish(new Error("connection"), true));
+        stream = client.request({
+          [constants.HTTP2_HEADER_METHOD]: "POST",
+          [constants.HTTP2_HEADER_PATH]: request.path,
+          ...request.headers,
+        });
+        let status = 0;
+        let body = "";
+        stream.setEncoding("utf8");
+        stream.on("response", (headers) => {
+          status = Number(headers[constants.HTTP2_HEADER_STATUS] ?? 0);
+        });
+        stream.on("data", (chunk: string) => {
+          if (body.length < 8192) body += chunk.slice(0, 8192 - body.length);
+        });
+        stream.once("end", () => finish({ status, body }, false));
+        stream.once("error", () => finish(new Error("stream"), true));
+        timer = dependencies.scheduleTimeout(() => finish(new Error("timeout"), true), request.timeoutMs);
+        stream.end(request.body);
+      } catch {
+        finish(new Error("request"), true);
+      }
     });
-  },
-};
+  } };
+}
+
+export const nodeApnsTransport = createNodeApnsTransport();
