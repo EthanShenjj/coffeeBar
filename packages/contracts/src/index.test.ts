@@ -1,15 +1,30 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   apiErrorCodeSchema,
+  apiFailureSchema,
+  apiSuccessSchema,
   announcementDetailSchema,
   announcementSummarySchema,
   appConfigSchema,
+  cartLineSchema,
   checkoutInputSchema,
+  checkoutResultSchema,
+  type CheckoutInput,
+  type CheckoutRequestInput,
   giftCardSummarySchema,
+  giftCardTransactionSchema,
   orderDetailSchema,
+  orderSummarySchema,
   productViewSchema,
   profileDashboardSchema,
+  pushTokenRegistrationResultSchema,
+  pushTokenRegistrationSchema,
 } from "./index";
+
+const product = { id: "latte", slug: "latte", name: "拿铁", subtitle: "经典", description: "奶咖", channel: "MENU", category: "咖啡", price: 6800, imageUrl: "https://coffeebar.local/latte.png", stock: null, isAvailable: true, optionGroups: [{ id: "milk", name: "奶", required: true, maxSelect: 1, options: [{ id: "oat", name: "燕麦奶", priceDelta: 300, isDefault: false }] }] };
+const orderItem = { id: "i1", productId: "latte", productName: "拿铁", productImage: "https://coffeebar.local/latte.png", category: "咖啡", unitPrice: 6800, quantity: 1, options: [], subtotal: 6800 };
+const orderSummary = { id: "o1", orderNumber: "CB2607171", status: "PAID", totalAmount: 6800, createdAt: "2026-07-17T09:00:00.000Z", items: [{ productName: "拿铁", quantity: 1 }] };
+const orderDetail = { id: "o1", orderNumber: "CB2607171", kind: "MENU", status: "PAID", totalAmount: 6800, pickupName: "林墨", pickupPhone: "13800138000", pickupAt: "2026-07-17T10:00:00.000Z", note: null, paidAt: "2026-07-17T09:00:00.000Z", createdAt: "2026-07-17T09:00:00.000Z", items: [orderItem] };
 
 describe("shared API contracts", () => {
   it("accepts only the documented API error codes", () => {
@@ -27,6 +42,8 @@ describe("shared API contracts", () => {
       items: [{ productId: "latte", quantity: 1, optionIds: ["oat"] }],
     };
     expect(checkoutInputSchema.safeParse(valid).success).toBe(true);
+    expectTypeOf<CheckoutInput>().toHaveProperty("useGiftCard").toEqualTypeOf<boolean>();
+    expectTypeOf<CheckoutRequestInput>().toMatchTypeOf<{ useGiftCard?: boolean }>();
     expect(checkoutInputSchema.safeParse({ ...valid, pickupAt: "tomorrow" }).success).toBe(false);
   });
 
@@ -34,12 +51,11 @@ describe("shared API contracts", () => {
     expect(appConfigSchema.safeParse({ supportEmail: "hello@coffeebar.local", termsUrl: "https://coffeebar.local/terms", privacyUrl: "https://coffeebar.local/privacy", updatedAt: "2026-07-17T10:00:00.000Z" }).success).toBe(true);
     expect(announcementDetailSchema.safeParse({ id: "a1", title: "夏日上新", summary: "冷萃回归", content: "欢迎品尝", coverUrl: null, publishedAt: "2026-07-17T10:00:00.000Z", createdAt: "2026-07-16T10:00:00.000Z", read: false }).success).toBe(true);
     expect(giftCardSummarySchema.safeParse({ balance: 12_800, persistent: true, transactions: [{ id: "t1", type: "RECHARGE", amount: 10_000, reference: "RECHARGE:1", orderNumber: null, createdAt: "2026-07-17T10:00:00.000Z" }] }).success).toBe(true);
-    expect(orderDetailSchema.safeParse({ id: "o1", orderNumber: "CB2607171", kind: "MENU", status: "PAID", totalAmount: 6800, pickupName: "林墨", pickupPhone: "13800138000", pickupAt: "2026-07-17T10:00:00.000Z", note: null, paidAt: "2026-07-17T09:00:00.000Z", createdAt: "2026-07-17T09:00:00.000Z", items: [{ id: "i1", productId: "latte", productName: "拿铁", productImage: "https://coffeebar.local/latte.png", category: "咖啡", unitPrice: 6800, quantity: 1, options: [], subtotal: 6800 }] }).success).toBe(true);
+    expect(orderDetailSchema.safeParse(orderDetail).success).toBe(true);
     expect(giftCardSummarySchema.safeParse({ balance: 12_800.5, persistent: true, transactions: [] }).success).toBe(false);
   });
 
   it("validates catalog products and their option groups", () => {
-    const product = { id: "latte", slug: "latte", name: "拿铁", subtitle: "经典", description: "奶咖", channel: "MENU", category: "咖啡", price: 6800, imageUrl: "https://coffeebar.local/latte.png", stock: null, isAvailable: true, optionGroups: [{ id: "milk", name: "奶", required: true, maxSelect: 1, options: [{ id: "oat", name: "燕麦奶", priceDelta: 300, isDefault: false }] }] };
     expect(productViewSchema.safeParse(product).success).toBe(true);
     expect(productViewSchema.safeParse({ ...product, price: 68.5 }).success).toBe(false);
   });
@@ -71,5 +87,55 @@ describe("shared API contracts", () => {
     expect(profileDashboardSchema.safeParse({ ...dashboard, level: { ...dashboard.level, nextThreshold: 60_000.5 } }).success).toBe(false);
     expect(profileDashboardSchema.safeParse({ ...dashboard, level: { level: "three" } }).success).toBe(false);
     expect(profileDashboardSchema.safeParse({ ...dashboard, level: { ...dashboard.level, nextThreshold: null } }).success).toBe(true);
+  });
+
+  it("validates API success and failure envelopes", () => {
+    const successSchema = apiSuccessSchema(productViewSchema);
+    expect(successSchema.safeParse({ ok: true, data: product }).success).toBe(true);
+    expect(successSchema.safeParse({ ok: false, data: product }).success).toBe(false);
+    expect(apiFailureSchema.safeParse({ ok: false, error: { code: "NOT_FOUND", message: "商品不存在" } }).success).toBe(true);
+    expect(apiFailureSchema.safeParse({ ok: false, error: { code: "RATE_LIMITED", message: "稍后重试" } }).success).toBe(false);
+  });
+
+  it("validates cart lines and checkout results", () => {
+    const line = { lineId: "line-1", product, quantity: 2, optionIds: ["oat"] };
+    const result = { ok: true, orderId: "o1", orderNumber: "CB2607171", totalAmount: 13_600, giftCardAmount: 3600, externalAmount: 10_000, demo: false };
+    expect(cartLineSchema.safeParse(line).success).toBe(true);
+    expect(cartLineSchema.safeParse({ ...line, quantity: 0 }).success).toBe(false);
+    expect(checkoutResultSchema.safeParse(result).success).toBe(true);
+    expect(checkoutResultSchema.safeParse({ ok: false, message: "支付未完成" }).success).toBe(true);
+    expect(checkoutResultSchema.safeParse({ ...result, totalAmount: -1 }).success).toBe(false);
+    expect(checkoutResultSchema.safeParse({ ...result, giftCardAmount: -1 }).success).toBe(false);
+    expect(checkoutResultSchema.safeParse({ ...result, externalAmount: -1 }).success).toBe(false);
+  });
+
+  it("validates order summaries and details", () => {
+    expect(orderSummarySchema.safeParse(orderSummary).success).toBe(true);
+    expect(orderSummarySchema.safeParse({ ...orderSummary, totalAmount: -1 }).success).toBe(false);
+    expect(orderDetailSchema.safeParse(orderDetail).success).toBe(true);
+    expect(orderDetailSchema.safeParse({ ...orderDetail, totalAmount: -1 }).success).toBe(false);
+    expect(orderDetailSchema.safeParse({ ...orderDetail, items: [{ ...orderItem, unitPrice: -1 }] }).success).toBe(false);
+    expect(orderDetailSchema.safeParse({ ...orderDetail, items: [{ ...orderItem, subtotal: 10.5 }] }).success).toBe(false);
+  });
+
+  it("validates push-token registration payloads and results", () => {
+    expect(pushTokenRegistrationSchema.safeParse({ token: "apns-token", platform: "IOS", deviceId: "iphone-1" }).success).toBe(true);
+    expect(pushTokenRegistrationSchema.safeParse({ token: "", platform: "IOS" }).success).toBe(false);
+    expect(pushTokenRegistrationSchema.safeParse({ token: "apns-token", platform: "MACOS" }).success).toBe(false);
+    expect(pushTokenRegistrationResultSchema.safeParse({ registered: true, updatedAt: "2026-07-17T10:00:00.000Z" }).success).toBe(true);
+    expect(pushTokenRegistrationResultSchema.safeParse({ registered: true, updatedAt: "today" }).success).toBe(false);
+  });
+
+  it("allows signed deltas but rejects negative balances, prices, stock, and totals", () => {
+    expect(productViewSchema.safeParse({ ...product, optionGroups: [{ ...product.optionGroups[0], options: [{ ...product.optionGroups[0].options[0], priceDelta: -300 }] }] }).success).toBe(true);
+    expect(productViewSchema.safeParse({ ...product, price: -1 }).success).toBe(false);
+    expect(productViewSchema.safeParse({ ...product, stock: -1 }).success).toBe(false);
+    expect(giftCardTransactionSchema.safeParse({ id: "t1", type: "PURCHASE", amount: -6800, reference: "PURCHASE:o1", orderNumber: "CB2607171", createdAt: "2026-07-17T10:00:00.000Z" }).success).toBe(true);
+    expect(giftCardSummarySchema.safeParse({ balance: -1, persistent: true, transactions: [] }).success).toBe(false);
+    const dashboard = { user: { name: "Coffee Lover", email: "demo@coffeebar.local", role: "CUSTOMER" }, giftCardBalance: 0, totalPaid: 68_600, monthPaid: 12_800, orderCount: 18, average: 3811, level: { level: 3, currentThreshold: 30_000, nextThreshold: 60_000, progress: 64 }, months: [38, 62, 45, 79, 54, 88], coffeeDays: [], today: "2026-07-17" };
+    expect(profileDashboardSchema.safeParse({ ...dashboard, giftCardBalance: -1 }).success).toBe(false);
+    expect(profileDashboardSchema.safeParse({ ...dashboard, totalPaid: -1 }).success).toBe(false);
+    expect(profileDashboardSchema.safeParse({ ...dashboard, monthPaid: -1 }).success).toBe(false);
+    expect(profileDashboardSchema.safeParse({ ...dashboard, average: -1 }).success).toBe(false);
   });
 });

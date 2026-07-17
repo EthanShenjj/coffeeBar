@@ -1,6 +1,7 @@
 {
   "name": "@coffeebar/contracts",
   "version": "0.1.0",
+  "description": "Source-first TypeScript API contracts for CoffeeBar bundler-based clients",
   "private": true,
   "type": "module",
   "exports": {
