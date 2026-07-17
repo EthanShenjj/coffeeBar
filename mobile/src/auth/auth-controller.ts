@@ -184,11 +184,36 @@ export function createAuthController(options: AuthControllerOptions) {
     await invalidateSession(logoutToken);
   }
 
+  async function deleteAccount(password: string) {
+    if (!token) {
+      try { token = await options.tokenStore.get(); } catch { token = null; }
+    }
+    const deletionToken = token;
+    if (!deletionToken) throw new Error("请先登录后再删除账户");
+    let response: Response;
+    try {
+      response = await boundedFetch(url(options.apiBaseUrl, "/api/auth/delete-user"), {
+        method: "POST",
+        headers: { ...Object.fromEntries(authHeaders(deletionToken)), "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+    } catch {
+      throw new Error("暂时无法删除账户，请检查网络后重试");
+    }
+    const body = await response.json().catch(() => null) as { success?: boolean } | null;
+    if (!response.ok || body?.success !== true) {
+      if (response.status === 400 || response.status === 401) throw new Error("当前密码不正确，账户未删除");
+      throw new Error("暂时无法删除账户，请稍后重试");
+    }
+    await invalidateSession(deletionToken);
+  }
+
   return {
     restore,
     signIn: (input: { email: string; password: string }) => submit("/api/auth/sign-in/email", input),
     signUp: (input: { name: string; email: string; password: string }) => submit("/api/auth/sign-up/email", input),
     signOut,
+    deleteAccount,
     invalidateSession,
     getSnapshot: () => snapshot,
     subscribe(listener: () => void) { listeners.add(listener); return () => listeners.delete(listener); },

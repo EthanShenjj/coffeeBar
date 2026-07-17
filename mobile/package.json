@@ -10,13 +10,16 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@amplitude/analytics-browser": "^2.45.1",
     "@capacitor/core": "^8.0.0",
     "@capacitor/network": "^8.0.0",
     "@coffeebar/contracts": "*",
     "@tanstack/react-query": "^5.90.0",
+    "mixpanel-browser": "^2.81.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-router-dom": "^7.9.0",
+    "thinkingdata-browser": "^2.5.0",
     "zustand": "5.0.14"
   },
   "devDependencies": {

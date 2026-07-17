@@ -139,6 +139,34 @@ describe("mobile bearer session", () => {
     expect(auth.getSnapshot().status).toBe("anonymous");
   });
 
+  it("deletes an account with the current password and invalidates the bearer session", async () => {
+    let stored: string | null = "token";
+    const store = {
+      get: vi.fn(async () => stored), set: vi.fn(), remove: vi.fn(async () => { stored = null; }),
+    };
+    const fetcher = vi.fn(async (_url: string, init?: RequestInit) => {
+      expect(init?.method).toBe("POST");
+      expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer token");
+      expect(JSON.parse(String(init?.body))).toEqual({ password: "correct password" });
+      return Response.json({ success: true, message: "User deleted" });
+    });
+    const auth = createAuthController({ tokenStore: store, fetcher, apiBaseUrl: "https://api.example.com" });
+    await expect(auth.deleteAccount("correct password")).resolves.toBeUndefined();
+    expect(fetcher).toHaveBeenCalledWith("https://api.example.com/api/auth/delete-user", expect.anything());
+    expect(stored).toBeNull();
+    expect(auth.getSnapshot()).toEqual({ status: "anonymous", user: null });
+  });
+
+  it("does not expose Better Auth deletion errors or clear a still-valid session", async () => {
+    const store = { get: vi.fn(async () => "token"), set: vi.fn(), remove: vi.fn() };
+    const auth = createAuthController({
+      tokenStore: store, apiBaseUrl: "https://api.example.com",
+      fetcher: vi.fn(async () => Response.json({ message: "INVALID_PASSWORD stack: secret" }, { status: 400 })),
+    });
+    await expect(auth.deleteAccount("wrong password")).rejects.toThrow("当前密码不正确，账户未删除");
+    expect(store.remove).not.toHaveBeenCalled();
+  });
+
   it("still completes local logout when secure-store reads fail", async () => {
     const store = {
       get: vi.fn(async () => { throw new Error("Keychain unavailable"); }),

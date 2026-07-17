@@ -8,6 +8,11 @@ import { restoreCatalogQueries } from "./query/catalog-query";
 import { createNetworkStore, observeNetwork } from "./state/network-store";
 import { resolveApiBaseUrl } from "./config/api-base-url";
 import { getSafeLocalStorage } from "./lib/safe-storage";
+import { createCustomerApi } from "./lib/customer-api";
+import { createCartStore } from "./state/cart-store";
+import { createAnalyticsConsentStore } from "./analytics/consent-store";
+import { browserAnalyticsVendors, createMobileAnalytics } from "./analytics/mobile-analytics";
+import { createLocaleStore } from "./state/locale-store";
 import "./styles.css";
 
 const apiBaseUrl = resolveApiBaseUrl({
@@ -18,6 +23,8 @@ const apiBaseUrl = resolveApiBaseUrl({
 });
 export const mobileRuntime = createMobileRuntime({ apiBaseUrl });
 const { auth, queryClient } = mobileRuntime;
+const localStorage = getSafeLocalStorage();
+const catalogCache = createCatalogCache(localStorage);
 const network = createNetworkStore({
   initialOnline: navigator.onLine,
   onReconnect: async () => {
@@ -25,17 +32,40 @@ const network = createNetworkStore({
     await queryClient.refetchQueries({ type: "active" });
   },
 });
+const consent = createAnalyticsConsentStore(localStorage);
+const analytics = createMobileAnalytics({
+  consent,
+  vendors: browserAnalyticsVendors,
+  config: {
+    amplitudeKey: import.meta.env.VITE_AMPLITUDE_API_KEY,
+    mixpanelToken: import.meta.env.VITE_MIXPANEL_PROJECT_TOKEN,
+    thinkingDataAppId: import.meta.env.VITE_THINKINGDATA_APP_ID,
+    thinkingDataServerUrl: import.meta.env.VITE_THINKINGDATA_SERVER_URL,
+  },
+  appVersion: import.meta.env.VITE_APP_VERSION ?? "0.0.0",
+  buildNumber: import.meta.env.VITE_BUILD_NUMBER ?? "0",
+});
+const services = {
+  api: mobileRuntime.api,
+  customerApi: createCustomerApi(mobileRuntime.api, network),
+  catalogCache,
+  network,
+  carts: { MENU: createCartStore("MENU", { storage: localStorage }), SHOP: createCartStore("SHOP", { storage: localStorage }) },
+  consent,
+  analytics,
+  locale: createLocaleStore(localStorage),
+};
 
 async function bootstrap() {
   await Promise.all([
     auth.restore(),
-    restoreCatalogQueries(queryClient, createCatalogCache(getSafeLocalStorage())),
+    restoreCatalogQueries(queryClient, catalogCache),
   ]);
   disposeNetwork?.();
   try { disposeNetwork = await observeNetwork(network); } catch { disposeNetwork = undefined; }
   const root = document.getElementById("root");
   if (!root) throw new Error("Mobile root element missing");
-  createRoot(root).render(<StrictMode><Root auth={auth} queryClient={queryClient} /></StrictMode>);
+  createRoot(root).render(<StrictMode><Root auth={auth} queryClient={queryClient} services={services} /></StrictMode>);
 }
 
 let disposeNetwork: (() => void) | undefined;
