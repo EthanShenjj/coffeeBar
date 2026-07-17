@@ -3,6 +3,7 @@ import type { AnalyticsConsentStore } from "./consent-store";
 export type AnalyticsValue = string | number | boolean | null | undefined;
 export type AnalyticsProperties = Record<string, AnalyticsValue>;
 export type AnalyticsClient = {
+  resume(): void;
   track(event: string, properties: Record<string, Exclude<AnalyticsValue, undefined>>): void;
   reset(): void;
   dispose(): void;
@@ -52,6 +53,7 @@ export function createMobileAnalytics(options: {
       discard(loaded);
       return null;
     }
+    try { loaded.resume(); } catch { /* a broken vendor must not block consent */ }
     client = loaded;
     return client;
   }
@@ -98,21 +100,26 @@ export const browserAnalyticsVendors: AnalyticsVendors = {
       thinking.init({ appId: config.thinkingDataAppId, serverUrl: config.thinkingDataServerUrl, autoTrack: false, batch: false });
     }
     return {
+      resume() {
+        try { amplitude?.setOptOut(false); } catch { /* independent vendors */ }
+        try { mixpanel?.opt_in_tracking(); } catch { /* independent vendors */ }
+        try { thinking?.optInTracking(); } catch { /* independent vendors */ }
+      },
       track(event, properties) {
         try { amplitude?.track(event, properties); } catch { /* independent vendors */ }
         try { mixpanel?.track(event, properties); } catch { /* independent vendors */ }
         try { thinking?.track(event, properties); } catch { /* independent vendors */ }
       },
       reset() {
-        amplitude?.reset();
-        mixpanel?.reset();
-        thinking?.logout(true);
-        thinking?.clearSuperProperties();
+        try { amplitude?.reset(); } catch { /* independent vendors */ }
+        try { mixpanel?.reset(); } catch { /* independent vendors */ }
+        try { thinking?.logout(true); } catch { /* independent vendors */ }
+        try { thinking?.clearSuperProperties(); } catch { /* independent vendors */ }
       },
       dispose() {
-        amplitude?.setOptOut(true);
-        mixpanel?.opt_out_tracking();
-        thinking?.optOutTracking();
+        try { amplitude?.setOptOut(true); } catch { /* independent vendors */ }
+        try { mixpanel?.opt_out_tracking(); } catch { /* independent vendors */ }
+        try { thinking?.optOutTracking(); } catch { /* independent vendors */ }
       },
     };
   },

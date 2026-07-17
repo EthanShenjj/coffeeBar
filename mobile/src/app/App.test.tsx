@@ -63,9 +63,20 @@ describe("mobile customer routes", () => {
 
   it("switches the persistent interface locale", async () => {
     const user = userEvent.setup(); setup("/", { status: "anonymous", user: null });
-    await user.click(screen.getByRole("button", { name: "Switch language" }));
+    await user.click(screen.getByRole("button", { name: /语言切换|Language switcher/ }));
     expect(screen.getAllByRole("link", { name: "Menu" })).toHaveLength(2);
     expect(window.localStorage.getItem("coffeebar.locale")).toBe("en");
+    expect(screen.getByText("Your everyday coffee and objects for coffee life.")).toBeInTheDocument();
+  });
+
+  it("uses English throughout customer-owned checkout copy and formats locale values", async () => {
+    window.localStorage.setItem("coffeebar.locale", "en");
+    const { services } = setup("/checkout?kind=MENU", { status: "authenticated", user: { id: "u1", name: "A", email: "a@example.com" } });
+    services.carts.MENU.getState().addItem({ id: "p", slug: "p", name: "拿铁", subtitle: "经典", description: "浓缩、鲜奶与丝滑奶泡", channel: "MENU", category: "奶咖", menuCollection: "CLASSIC", menuSection: "意式咖啡", price: 3200, imageUrl: "", stock: null, isAvailable: true, optionGroups: [] }, []);
+    expect(screen.getByLabelText("Pickup name")).toBeInTheDocument();
+    expect(screen.getByLabelText("Phone number")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Place order" })).toBeInTheDocument();
+    expect(screen.queryByText("购物车为空，请先添加商品。")).not.toBeInTheDocument();
   });
 
   it("registers with the auth controller and keeps server errors generic", async () => {
@@ -76,5 +87,15 @@ describe("mobile customer routes", () => {
     await waitFor(() => expect(controller.signUp).toHaveBeenCalledWith({ name: "Alice", email: "alice@example.com", password: "password1" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("无法创建账户");
     expect(screen.getByRole("alert")).not.toHaveTextContent("database");
+  });
+
+  it("preserves the existing auth and page analytics event semantics", async () => {
+    const user = userEvent.setup(); const { services } = setup("/register", { status: "anonymous", user: null });
+    await user.type(screen.getByLabelText("姓名"), "Alice"); await user.type(screen.getByLabelText("邮箱"), "alice@example.com"); await user.type(screen.getByLabelText("密码"), "password1");
+    await user.click(screen.getByRole("button", { name: "注册" }));
+    await waitFor(() => expect(services.analytics.track).toHaveBeenCalledWith("auth_submitted", expect.objectContaining({ auth_mode: "signup" })));
+    expect(services.analytics.track).toHaveBeenCalledWith("regist", expect.objectContaining({ regist_method: "email_password" }));
+    expect(services.analytics.track).toHaveBeenCalledWith("login", expect.objectContaining({ login_method: "signup_auto_login" }));
+    expect(services.analytics.track).toHaveBeenCalledWith("page_viewed", expect.objectContaining({ page_name: "register", path: "/register" }));
   });
 });

@@ -5,7 +5,7 @@ describe("mobile analytics consent gate", () => {
   it("does not initialize or track before explicit consent and adds iOS build context afterwards", async () => {
     const consent = createAnalyticsConsentStore(window.localStorage);
     const vendors: AnalyticsVendors = {
-      load: vi.fn(async () => ({ track: vi.fn(), reset: vi.fn(), dispose: vi.fn() })),
+      load: vi.fn(async () => ({ resume: vi.fn(), track: vi.fn(), reset: vi.fn(), dispose: vi.fn() })),
     };
     const analytics = createMobileAnalytics({
       consent,
@@ -30,6 +30,13 @@ describe("mobile analytics consent gate", () => {
     expect(client.dispose).toHaveBeenCalledOnce();
     await analytics.track("checkout_started");
     expect(client.track).toHaveBeenCalledTimes(1);
+
+    await consent.getState().decide(true);
+    await analytics.track("page_viewed", { page_name: "home" });
+    expect(vendors.load).toHaveBeenCalledTimes(2);
+    const resumed = await vi.mocked(vendors.load).mock.results[1]!.value;
+    expect(resumed.resume).toHaveBeenCalledOnce();
+    expect(resumed.track).toHaveBeenCalledWith("page_viewed", expect.objectContaining({ platform: "ios" }));
   });
 
   it("persists undecided separately from denied and defaults to disabled", async () => {
@@ -44,7 +51,7 @@ describe("mobile analytics consent gate", () => {
   it("does not emit an event when consent is withdrawn while SDKs are loading", async () => {
     const consent = createAnalyticsConsentStore(window.localStorage); await consent.getState().decide(true);
     let finish!: (client: AnalyticsClient) => void;
-    const client: AnalyticsClient = { track: vi.fn(), reset: vi.fn(), dispose: vi.fn() };
+    const client: AnalyticsClient = { resume: vi.fn(), track: vi.fn(), reset: vi.fn(), dispose: vi.fn() };
     const vendors: AnalyticsVendors = { load: vi.fn(() => new Promise<AnalyticsClient>((resolve) => { finish = resolve; })) };
     const analytics = createMobileAnalytics({ consent, vendors, config: { amplitudeKey: "a" }, appVersion: "1", buildNumber: "1" });
     const tracking = analytics.track("product_viewed");

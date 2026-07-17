@@ -24,5 +24,22 @@ it("blocks the application behind the first-launch analytics choice", async () =
   const user = userEvent.setup(); render(<Root auth={auth} queryClient={new QueryClient()} services={services} />);
   expect(screen.getByRole("heading", { name: /帮助我们改善/ })).toBeInTheDocument(); expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "暂不允许" }));
-  expect(screen.getByRole("heading", { name: /CoffeeBar/ })).toBeInTheDocument(); expect(services.analytics.track).not.toHaveBeenCalled();
+  expect(screen.getByRole("heading", { name: /CoffeeBar/ })).toBeInTheDocument();
+  expect(services.analytics.track).not.toHaveBeenCalledWith("analytics_consent", expect.anything());
+});
+
+it("offers the privacy choice in English before analytics can initialize", async () => {
+  const consent = createAnalyticsConsentStore(window.localStorage);
+  const services = {
+    api: {}, customerApi: {}, catalogCache: createCatalogCache(window.localStorage), network: createNetworkStore({ initialOnline: true }),
+    carts: { MENU: createCartStore("MENU", { storage: window.localStorage }), SHOP: createCartStore("SHOP", { storage: window.localStorage }) },
+    consent, analytics: { track: vi.fn(async () => undefined) }, locale: createLocaleStore(window.localStorage),
+  } as unknown as AppServices;
+  const snapshot = { status: "anonymous", user: null } as const;
+  const auth = { getSnapshot: () => snapshot, subscribe: () => () => true } as unknown as AuthController;
+  const user = userEvent.setup(); render(<Root auth={auth} queryClient={new QueryClient()} services={services} />);
+  await user.click(screen.getByRole("button", { name: "语言切换" }));
+  expect(screen.getByRole("heading", { name: "Help us improve CoffeeBar?" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Allow analytics" })).toBeInTheDocument();
+  expect(services.analytics.track).not.toHaveBeenCalled();
 });

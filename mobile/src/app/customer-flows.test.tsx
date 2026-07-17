@@ -38,6 +38,33 @@ function renderFlow(path: string, options: { auth?: AuthSnapshot; online?: boole
 }
 
 describe("mobile catalog, carts and checkout", () => {
+  it("uses the shared Web translations for product and option copy", async () => {
+    window.localStorage.setItem("coffeebar.locale", "en");
+    const translated = { ...latte, name: "拿铁", subtitle: "经典美式", description: "浓缩、鲜奶与丝滑奶泡" };
+    const user = userEvent.setup(); renderFlow("/menu", { products: [translated] });
+    await user.click(await screen.findByRole("button", { name: /Latte/ }));
+    expect(screen.getByRole("group", { name: /Temperature/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Hot")).toBeInTheDocument();
+    expect(screen.getByText("Espresso, fresh milk, and silky microfoam")).toBeInTheDocument();
+  });
+  it("preserves existing Web analytics event names for product, cart, and checkout actions", async () => {
+    const user = userEvent.setup(); const { services } = renderFlow("/menu", { products: [latte] });
+    await user.click(await screen.findByRole("button", { name: /Latte/ }));
+    await user.click(screen.getByLabelText("热"));
+    await user.click(screen.getByRole("button", { name: "加入购物车" }));
+    expect(services.analytics.track).toHaveBeenCalledWith("product_option_selected", expect.objectContaining({ product_id: "latte", option_id: "hot" }));
+    expect(services.analytics.track).toHaveBeenCalledWith("add_to_cart", expect.objectContaining({ product_id: "latte" }));
+  });
+
+  it("preserves cart view, quantity, and removal event names", async () => {
+    const user = userEvent.setup(); const { services } = renderFlow("/cart/menu");
+    services.carts.MENU.getState().addItem(latte, ["hot"]);
+    await user.click(await screen.findByLabelText("增加数量"));
+    await user.click(screen.getByRole("button", { name: "删除" }));
+    expect(services.analytics.track).toHaveBeenCalledWith("cart_viewed", expect.objectContaining({ product_channel: "MENU" }));
+    expect(services.analytics.track).toHaveBeenCalledWith("cart_item_quantity_changed", expect.objectContaining({ quantity: 2 }));
+    expect(services.analytics.track).toHaveBeenCalledWith("cart_item_removed", expect.objectContaining({ product_id: "latte" }));
+  });
   it("validates required specs and keeps menu/shop carts isolated", async () => {
     const user = userEvent.setup(); const { services } = renderFlow("/menu", { products: [latte] });
     await user.click(await screen.findByRole("button", { name: /Latte/ }));
@@ -68,6 +95,7 @@ describe("mobile catalog, carts and checkout", () => {
     await user.type(screen.getByLabelText("取货人"), "Alice");
     const button = screen.getByRole("button", { name: "确认下单" }); await user.dblClick(button);
     expect(checkout).toHaveBeenCalledOnce(); expect(checkout.mock.calls[0]![0].token).toMatch(/^[0-9a-f-]{36}$/);
+    expect(services.analytics.track).toHaveBeenCalledWith("payment_submitted", expect.objectContaining({ product_channel: "MENU" }));
     resolve({ ok: true, orderId: "o1", orderNumber: "CB001", totalAmount: 3200, giftCardAmount: 0, externalAmount: 3200, demo: true });
     expect(await screen.findByRole("heading", { name: "下单成功" })).toBeInTheDocument();
     expect(services.carts.MENU.getState().items).toHaveLength(0);
