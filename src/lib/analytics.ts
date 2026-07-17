@@ -19,6 +19,8 @@ type ThinkingDataClient = {
   init: (config: Record<string, unknown>) => void;
   track: (eventName: string, eventProperties?: Record<string, unknown>) => void;
   login: (accountId: string) => void;
+  getAccountId?: () => string;
+  getDistinctId?: () => string;
   userSet: (userProperties: Record<string, unknown>) => void;
   flush: () => void;
 };
@@ -185,6 +187,30 @@ export function identifyAnalytics(userId?: string | null, properties: AnalyticsP
       pendingThinkingDataIdentity = { userId, properties: payload };
     }
   }
+}
+
+export async function getThinkingDataIdentity(timeoutMs = 500) {
+  if (!thinkingDataEnabled || typeof window === "undefined") return {};
+  initAnalytics();
+  const timeout = new Promise<null>((resolve) => window.setTimeout(() => resolve(null), timeoutMs));
+  const client = thinkingDataClient
+    ?? await Promise.race([thinkingDataLoading ?? Promise.resolve(null), timeout]);
+  return {
+    accountId: client?.getAccountId?.() || undefined,
+    distinctId: client?.getDistinctId?.() || undefined,
+  };
+}
+
+export function trackThinkingDataExperimentExposure(detail: {
+  experimentId: string;
+  experimentGroupId: string;
+  isControlGroup: boolean;
+}) {
+  trackThinkingData("te_experiment_exposure", {
+    "#experiment_id": detail.experimentId,
+    "#experiment_group_id": detail.experimentGroupId,
+    "#is_control_group": detail.isControlGroup,
+  });
 }
 
 export async function flushAnalytics(timeoutMs = 800) {

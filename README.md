@@ -39,6 +39,7 @@ npm run dev
 - `NEXT_PUBLIC_MIXPANEL_PROJECT_TOKEN`: Mixpanel 项目的 Project Token，用于前端行为事件上报
 - `NEXT_PUBLIC_THINKINGDATA_APP_ID`: ThinkingData 项目的 App ID，用于前端行为事件上报
 - `NEXT_PUBLIC_THINKINGDATA_SERVER_URL`: ThinkingData 数据接收地址，例如 `https://ta-preview.thinkingdata.cn`
+- `THINKINGDATA_EXPERIMENT_FETCH_URL`: ThinkingData Web Experiment 远端分流 Fetch 完整地址；由实验服务提供方确认，未配置或请求失败时登录页使用原始文案
 - `THINKINGDATA_WEBHOOK_SECRET`: ThinkingData AE Webhook 通道鉴权密钥；配置后接口会校验 `X-AE-OPS-Signature` / `X-TE-OPS-Signature` 的 HmacSHA1 签名
 - `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`: 首次种子管理员，仅通过安全环境变量提供
 
@@ -51,6 +52,15 @@ npm run dev
 - 返回值：`{ "return_code": 0, "return_message": "success", "data": { "fail_list": [] } }`
 
 当前接口完成通道接入格式校验和成功回执；后续如果要把 Webhook 消息投递到 CoffeeBar 消息中心，可以在 `src/app/api/thinkingdata/webhook/route.ts` 的成功分支中接入持久化或发送逻辑。
+
+## ThinkingData Web Experiment
+
+- 登录页请求 Feature Key `登录页注册引导文案`，请求体携带 SDK 当前的 `#account_id`、`#distinct_id`、`#feature_key` 与 `#lib`。
+- 浏览器通过 `/api/thinkingdata/experiment/fetch` 同源代理拉取远端分流结果；代理使用 `THINKINGDATA_EXPERIMENT_FETCH_URL`，单次 500 ms 超时，最多尝试 3 次。
+- 同时兼容 Feature 内嵌 `experiment_detail` 和顶层 `experiment_detail` 两种返回结构；值无效、服务未配置或请求失败时稳定回退原始登录文案。
+- 文案真正渲染后上报 `te_experiment_exposure`，包含 `#experiment_id`、`#experiment_group_id`、`#is_control_group`；同一浏览器按实验、组别和分流主体缓存 24 小时，避免重复曝光。
+
+ThinkingData 的公开 JavaScript 与 Node.js 接入文档目前只覆盖数据采集 SDK，没有公布 Web Experiment Fetch 地址或鉴权格式。部署前需要由 ThinkingData 实验服务提供方确认 `THINKINGDATA_EXPERIMENT_FETCH_URL` 的完整值；不要用数据接收地址 `/sync_js` 代替实验 Fetch 地址。
 
 ## 校验
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Toaster } from "sonner";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import { I18nProvider } from "@/components/i18n-provider";
@@ -29,6 +30,10 @@ export default async function RootLayout({
           <Toaster position="top-center" richColors />
         </I18nProvider>
       </body>
+      <Script
+        src="https://cdn.amplitude.com/script/32a30ec9e86b7dd4d0225cb76bfbd509.experiment.js"
+        strategy="beforeInteractive"
+      />
     </html>
   );
 }
