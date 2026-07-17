@@ -31,6 +31,31 @@ describe("mobile bearer session", () => {
     expect(auth.getSnapshot()).toEqual({ status: "retryable", user: null });
   });
 
+  it("does not publish an old restore result whose JSON resolves after a new login", async () => {
+    const store = createBrowserSessionTokenStore();
+    await store.set("old-token");
+    let releaseJson!: () => void;
+    let jsonStarted!: () => void;
+    const jsonStartedPromise = new Promise<void>((resolve) => { jsonStarted = resolve; });
+    const jsonGate = new Promise<void>((resolve) => { releaseJson = resolve; });
+    const fetcher = vi.fn(async (input: string) => {
+      if (input.endsWith("/api/auth/get-session")) return new Response(JSON.stringify({}), { status: 200, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ user: { id: "new", name: "New", email: "new@example.com" } }), { headers: { "Content-Type": "application/json", "set-auth-token": "new-token" } });
+    });
+    fetcher.mockImplementationOnce(async () => ({
+      ok: true, status: 200,
+      json: async () => { jsonStarted(); await jsonGate; return { user: { id: "old", name: "Old", email: "old@example.com" } }; },
+    } as Response));
+    const auth = createAuthController({ tokenStore: store, fetcher, apiBaseUrl: "https://api.example.com" });
+    const restoring = auth.restore();
+    await jsonStartedPromise;
+    await auth.signIn({ email: "new@example.com", password: "password1" });
+    releaseJson();
+    await restoring;
+    expect(await store.get()).toBe("new-token");
+    expect(auth.getSnapshot()).toEqual({ status: "authenticated", user: { id: "new", name: "New", email: "new@example.com" } });
+  });
+
   it("captures set-auth-token after email sign in", async () => {
     const store = createBrowserSessionTokenStore();
     const fetcher = vi.fn(async () => new Response(JSON.stringify({ user: { id: "u1", email: "a@example.com", name: "A" } }), {
@@ -47,11 +72,16 @@ describe("mobile bearer session", () => {
     await store.set("expired");
     const navigate = vi.fn();
     const clearSessionQuery = vi.fn();
-    const invalidateSession = vi.fn(async () => { await store.remove(); return "invalidated" as const; });
+    let currentPath = "/orders/o1";
+    const invalidateSession = vi.fn(async () => {
+      await store.remove();
+      currentPath = "/login";
+      return "invalidated" as const;
+    });
     const client = createApiClient({
       baseUrl: "https://api.example.com", tokenStore: store, navigate,
       fetcher: vi.fn(async () => Response.json({ error: { code: "UNAUTHORIZED", message: "expired" } }, { status: 401 })),
-      getCurrentPath: () => "/orders/o1",
+      getCurrentPath: () => currentPath,
       clearSensitiveSessionQueries: clearSessionQuery,
       invalidateSession,
     });
@@ -119,5 +149,28 @@ describe("mobile bearer session", () => {
     await expect(auth.signOut()).resolves.toBeUndefined();
     expect(store.remove).toHaveBeenCalledOnce();
     expect(auth.getSnapshot().status).toBe("anonymous");
+  });
+
+  it("aborts hung push cleanup and sign-out requests, then clears locally within the bound", async () => {
+    vi.useFakeTimers();
+    try {
+      const signals: AbortSignal[] = [];
+      const store = {
+        get: vi.fn(async () => "token"), set: vi.fn(), remove: vi.fn(async () => undefined),
+      };
+      const fetcher = vi.fn(async (_url: string, init?: RequestInit) => {
+        signals.push(init?.signal as AbortSignal);
+        return new Promise<Response>(() => undefined);
+      });
+      const auth = createAuthController({ tokenStore: store, fetcher, apiBaseUrl: "https://api.example.com", deviceId: "phone", requestTimeoutMs: 50 });
+      const loggingOut = auth.signOut();
+      await vi.advanceTimersByTimeAsync(200);
+      await expect(loggingOut).resolves.toBeUndefined();
+      expect(fetcher).toHaveBeenCalledTimes(3);
+      expect(signals.every((signal) => signal.aborted)).toBe(true);
+      expect(store.remove).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

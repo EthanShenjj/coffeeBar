@@ -1,9 +1,9 @@
-import { cartLineSchema, type CartKind, type CartLine, type ProductView } from "@coffeebar/contracts";
+import { CHECKOUT_MAX_ITEM_LINES, cartLineSchema, type CartKind, type CartLine, type ProductView } from "@coffeebar/contracts";
 import { z } from "zod";
 import { createStore } from "zustand/vanilla";
 
 const VERSION = 1;
-const MAX_CART_LINES = 100;
+const MAX_CART_LINES = CHECKOUT_MAX_ITEM_LINES;
 const MAX_LINE_QUANTITY = 20;
 const persistedCartSchema = z.object({
   version: z.literal(VERSION),
@@ -13,7 +13,13 @@ const persistedCartSchema = z.object({
 
 function normalizeOptions(product: ProductView, inputOptionIds: string[]) {
   const optionIds = [...new Set(inputOptionIds)].sort();
-  const optionGroupsByOption = new Map(product.optionGroups.flatMap((group) => group.options.map((option) => [option.id, group] as const)));
+  const optionGroupsByOption = new Map<string, (typeof product.optionGroups)[number]>();
+  for (const group of product.optionGroups) {
+    for (const option of group.options) {
+      if (optionGroupsByOption.has(option.id)) throw new Error(`规格 ID 重复：${option.id}`);
+      optionGroupsByOption.set(option.id, group);
+    }
+  }
   for (const optionId of optionIds) {
     if (!optionGroupsByOption.has(optionId)) throw new Error("包含未知规格");
   }
@@ -46,7 +52,15 @@ export function restoreCartState(raw: string | null, kind: CartKind): { items: C
       const line = cartLineSchema.safeParse(candidate);
       if (!line.success || line.data.product.channel !== kind) continue;
       try {
-        items.push(createLine(line.data.product, line.data.optionIds, line.data.quantity));
+        const normalized = createLine(line.data.product, line.data.optionIds, line.data.quantity);
+        const existingIndex = items.findIndex((item) => item.lineId === normalized.lineId);
+        if (existingIndex >= 0) {
+          const existing = items[existingIndex]!;
+          const combinedQuantity = existing.quantity + normalized.quantity;
+          if (combinedQuantity <= MAX_LINE_QUANTITY) items[existingIndex] = { ...existing, quantity: combinedQuantity };
+          continue;
+        }
+        items.push(normalized);
       } catch {
         // Drop only the corrupted line and retain the rest of the local cart.
       }

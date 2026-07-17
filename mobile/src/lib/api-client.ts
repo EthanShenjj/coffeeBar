@@ -36,18 +36,17 @@ export function createApiClient(options: ClientOptions) {
   const fetcher = options.fetcher ?? ((input: string, init?: RequestInit) => fetch(input, init));
   const unauthorizedTasks = new Map<string, Promise<void>>();
 
-  async function handleUnauthorized(usedToken: string | null) {
+  async function handleUnauthorized(usedToken: string | null, intendedPath: string) {
     const key = usedToken ?? "<anonymous>";
     let task = unauthorizedTasks.get(key);
     if (!task) {
       task = (async () => {
         const invalidation = await options.invalidateSession(usedToken);
-        if (invalidation === "stale") return;
-        try {
-          await options.clearSensitiveSessionQueries();
-        } finally {
-          if (invalidation === "invalidated") {
-            saveIntendedRoute(options.getCurrentPath?.() ?? `${window.location.pathname}${window.location.search}`);
+        if (invalidation === "invalidated") {
+          saveIntendedRoute(intendedPath);
+          try {
+            await options.clearSensitiveSessionQueries();
+          } finally {
             options.navigate?.("/login", { replace: true });
           }
         }
@@ -81,7 +80,10 @@ export function createApiClient(options: ClientOptions) {
       const error = failure.success
         ? new ApiClientError(failure.data.error.code, failure.data.error.message, response.status, failure.data.error.fieldErrors)
         : new ApiClientError("INTERNAL_ERROR", "服务器返回了无效响应", response.status);
-      if (response.status === 401) await handleUnauthorized(usedToken);
+      if (response.status === 401) {
+        const intendedPath = options.getCurrentPath?.() ?? `${window.location.pathname}${window.location.search}`;
+        await handleUnauthorized(usedToken, intendedPath);
+      }
       throw error;
     }
 

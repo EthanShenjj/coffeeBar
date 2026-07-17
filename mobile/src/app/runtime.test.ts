@@ -108,7 +108,7 @@ describe("runtime 401 session invalidation", () => {
     await Promise.all([newLogin, expect(rejectedRequest).rejects.toMatchObject({ code: "UNAUTHORIZED" })]);
     expect(storedToken).toBe("new-token");
     expect(runtime.auth.getSnapshot().status).toBe("authenticated");
-    expect(queryClient.getQueryData(["orders"])).toBeUndefined();
+    expect(queryClient.getQueryData(["orders"])).toEqual([{ id: "old-private-data" }]);
     expect(navigate).not.toHaveBeenCalled();
   });
 });

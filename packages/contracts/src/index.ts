@@ -82,6 +82,7 @@ export const checkoutItemSchema = z.object({
   quantity: z.number().int().min(1).max(20),
   optionIds: z.array(z.string()).max(8),
 });
+export const CHECKOUT_MAX_ITEM_LINES = 30;
 export const checkoutInputSchema = z.object({
   token: z.string().uuid(),
   kind: cartKindSchema,
@@ -94,7 +95,7 @@ export const checkoutInputSchema = z.object({
   }, "请选择 3 天内的取货时间"),
   note: z.string().trim().max(200).optional(),
   useGiftCard: z.boolean().default(false),
-  items: z.array(checkoutItemSchema).min(1).max(30),
+  items: z.array(checkoutItemSchema).min(1).max(CHECKOUT_MAX_ITEM_LINES),
 });
 export type CheckoutInput = z.output<typeof checkoutInputSchema>;
 export type CheckoutRequestInput = z.input<typeof checkoutInputSchema>;

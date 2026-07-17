@@ -12,6 +12,11 @@ type AuthControllerOptions = {
   apiBaseUrl: string;
   fetcher?: (input: string, init?: RequestInit) => Promise<Response>;
   deviceId?: string;
+  requestTimeoutMs?: number;
+  timer?: {
+    setTimeout(callback: () => void, milliseconds: number): ReturnType<typeof setTimeout>;
+    clearTimeout(handle: ReturnType<typeof setTimeout>): void;
+  };
 };
 
 function url(base: string, path: string) {
@@ -27,6 +32,8 @@ function parseUser(value: unknown): SessionUser | null {
 
 export function createAuthController(options: AuthControllerOptions) {
   const fetcher = options.fetcher ?? ((input: string, init?: RequestInit) => fetch(input, init));
+  const timer = options.timer ?? { setTimeout, clearTimeout };
+  const requestTimeoutMs = options.requestTimeoutMs ?? 5_000;
   let token: string | null = null;
   let snapshot: AuthSnapshot = { status: "restoring", user: null };
   let sessionEpoch = 0;
@@ -46,6 +53,23 @@ export function createAuthController(options: AuthControllerOptions) {
     credentialWrite = result.then(() => undefined, () => undefined);
     return result;
   };
+  const isRestoreCurrent = (epoch: number, restoredToken: string) => epoch === sessionEpoch && token === restoredToken;
+
+  async function boundedFetch(input: string, init: RequestInit) {
+    const controller = new AbortController();
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<Response>((_, reject) => {
+      timeoutHandle = timer.setTimeout(() => {
+        controller.abort();
+        reject(new DOMException("Request timed out", "AbortError"));
+      }, requestTimeoutMs);
+    });
+    try {
+      return await Promise.race([fetcher(input, { ...init, signal: controller.signal }), timeout]);
+    } finally {
+      if (timeoutHandle !== undefined) timer.clearTimeout(timeoutHandle);
+    }
+  }
 
   async function restore() {
     const restoreEpoch = sessionEpoch;
@@ -63,28 +87,29 @@ export function createAuthController(options: AuthControllerOptions) {
     }
     try {
       const response = await fetcher(url(options.apiBaseUrl, "/api/auth/get-session"), { headers: authHeaders() });
-      if (restoreEpoch !== sessionEpoch) return;
+      if (!isRestoreCurrent(restoreEpoch, restoredToken)) return;
       if (response.status === 401) {
         await invalidateSession(restoredToken);
         return;
       }
       if (!response.ok) {
-        publish({ status: "retryable", user: null });
+        if (isRestoreCurrent(restoreEpoch, restoredToken)) publish({ status: "retryable", user: null });
         return;
       }
       let body: { user?: unknown } | null;
       try {
         body = await response.json() as { user?: unknown } | null;
       } catch {
-        publish({ status: "retryable", user: null });
+        if (isRestoreCurrent(restoreEpoch, restoredToken)) publish({ status: "retryable", user: null });
         return;
       }
+      if (!isRestoreCurrent(restoreEpoch, restoredToken)) return;
       const user = parseUser(body?.user);
       if (!user) {
         await invalidateSession(restoredToken);
         return;
       }
-      publish({ status: "authenticated", user });
+      if (isRestoreCurrent(restoreEpoch, restoredToken)) publish({ status: "authenticated", user });
     } catch {
       // A transport failure does not prove that the credential is invalid.
       if (restoreEpoch === sessionEpoch) publish({ status: "retryable", user: null });
@@ -142,7 +167,7 @@ export function createAuthController(options: AuthControllerOptions) {
     if (options.deviceId) {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
-          const response = await fetcher(url(options.apiBaseUrl, `/api/v1/me/push-tokens/${encodeURIComponent(options.deviceId)}`), {
+          const response = await boundedFetch(url(options.apiBaseUrl, `/api/v1/me/push-tokens/${encodeURIComponent(options.deviceId)}`), {
             method: "DELETE", headers: logoutHeaders,
           });
           if (response.ok || response.status < 500) break;
@@ -152,7 +177,7 @@ export function createAuthController(options: AuthControllerOptions) {
       }
     }
     try {
-      await fetcher(url(options.apiBaseUrl, "/api/auth/sign-out"), { method: "POST", headers: logoutHeaders });
+      await boundedFetch(url(options.apiBaseUrl, "/api/auth/sign-out"), { method: "POST", headers: logoutHeaders });
     } catch {
       // Local logout must continue.
     }

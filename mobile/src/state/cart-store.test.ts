@@ -67,12 +67,12 @@ describe("persisted dual carts", () => {
     expect(menu.getState().totalCents()).toBe(3200);
     expect(() => menu.getState().addItem(coffee, ["hot"], 20)).toThrow("数量");
 
-    for (let index = 0; index < 99; index += 1) {
+    for (let index = 0; index < 29; index += 1) {
       menu.getState().addItem({ ...coffee, id: `coffee-${index + 2}` }, ["hot"]);
     }
-    expect(menu.getState().items).toHaveLength(100);
+    expect(menu.getState().items).toHaveLength(30);
     expect(() => menu.getState().addItem({ ...coffee, id: "overflow" }, ["hot"])).toThrow("上限");
-    expect(restoreCartState(window.localStorage.getItem("coffeebar.cart.MENU"), "MENU").items).toHaveLength(100);
+    expect(restoreCartState(window.localStorage.getItem("coffeebar.cart.MENU"), "MENU").items).toHaveLength(30);
   });
 
   it("drops irreparable polluted hydrate lines without dropping the valid cart", () => {
@@ -82,5 +82,27 @@ describe("persisted dual carts", () => {
       { lineId: "too-many", product: coffee, quantity: 21, optionIds: ["hot"] },
     ] });
     expect(restoreCartState(raw, "MENU").items).toEqual([expect.objectContaining({ lineId: "coffee-1:hot" })]);
+  });
+
+  it("merges canonical duplicate hydrate lines without duplicate checkout keys", () => {
+    const raw = JSON.stringify({ version: 1, kind: "MENU", items: [
+      { lineId: "first", product: coffee, quantity: 2, optionIds: ["hot"] },
+      { lineId: "second", product: coffee, quantity: 3, optionIds: ["hot", "hot"] },
+      { lineId: "overflow", product: coffee, quantity: 20, optionIds: ["hot"] },
+    ] });
+    expect(restoreCartState(raw, "MENU").items).toEqual([
+      expect.objectContaining({ lineId: "coffee-1:hot", quantity: 5, optionIds: ["hot"] }),
+    ]);
+  });
+
+  it("rejects product option IDs duplicated across groups at add and hydrate boundaries", () => {
+    const ambiguous: ProductView = { ...coffee, optionGroups: [
+      ...coffee.optionGroups,
+      { id: "duplicate", name: "Duplicate", required: false, maxSelect: 1, options: [{ id: "hot", name: "Again", priceDelta: 100 }] },
+    ] };
+    const menu = createCartStore("MENU", { storage: window.localStorage });
+    expect(() => menu.getState().addItem(ambiguous, ["hot"])).toThrow("重复");
+    const raw = JSON.stringify({ version: 1, kind: "MENU", items: [{ lineId: "bad", product: ambiguous, quantity: 1, optionIds: ["hot"] }] });
+    expect(restoreCartState(raw, "MENU").items).toEqual([]);
   });
 });
