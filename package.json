@@ -2,6 +2,10 @@
   "name": "coffeebar",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "mobile",
+    "packages/contracts"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,6 +13,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "contracts:test": "npm --workspace @coffeebar/contracts run test",
+    "contracts:typecheck": "npm --workspace @coffeebar/contracts run typecheck",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:generate": "prisma generate",
@@ -26,6 +32,7 @@
     "@radix-ui/react-slot": "1.3.0",
     "@radix-ui/react-tabs": "1.1.17",
     "@vercel/blob": "2.6.1",
+    "@coffeebar/contracts": "workspace:*",
     "better-auth": "1.6.23",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
