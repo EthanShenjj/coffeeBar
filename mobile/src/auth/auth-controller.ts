@@ -28,6 +28,8 @@ export function createAuthController(options: AuthControllerOptions) {
   const fetcher = options.fetcher ?? ((input: string, init?: RequestInit) => fetch(input, init));
   let token: string | null = null;
   let snapshot: AuthSnapshot = { status: "restoring", user: null };
+  let sessionEpoch = 0;
+  let invalidationTask: Promise<void> | null = null;
   const listeners = new Set<() => void>();
   const publish = (next: AuthSnapshot) => {
     snapshot = next;
@@ -40,19 +42,24 @@ export function createAuthController(options: AuthControllerOptions) {
   };
 
   async function restore() {
+    const restoreEpoch = sessionEpoch;
+    let restoredToken: string | null;
     try {
-      token = await options.tokenStore.get();
+      restoredToken = await options.tokenStore.get();
     } catch {
-      token = null;
+      restoredToken = null;
     }
-    if (!token) {
-      publish({ status: "anonymous", user: null });
+    if (restoreEpoch !== sessionEpoch) return;
+    token = restoredToken;
+    if (!restoredToken) {
+      if (restoreEpoch === sessionEpoch) publish({ status: "anonymous", user: null });
       return;
     }
     try {
       const response = await fetcher(url(options.apiBaseUrl, "/api/auth/get-session"), { headers: authHeaders() });
       const body = await response.json() as { user?: unknown } | null;
       const user = response.ok ? parseUser(body?.user) : null;
+      if (restoreEpoch !== sessionEpoch) return;
       if (!user) {
         try {
           await options.tokenStore.remove();
@@ -65,8 +72,22 @@ export function createAuthController(options: AuthControllerOptions) {
       publish({ status: "authenticated", user });
     } catch {
       // A transport failure does not prove that the credential is invalid.
-      publish({ status: "anonymous", user: null });
+      if (restoreEpoch === sessionEpoch) publish({ status: "anonymous", user: null });
     }
+  }
+
+  async function invalidateSession() {
+    invalidationTask ??= (async () => {
+      sessionEpoch += 1;
+      token = null;
+      publish({ status: "anonymous", user: null });
+      try {
+        await options.tokenStore.remove();
+      } catch {
+        // In-memory authentication must still be invalidated if Keychain is unavailable.
+      }
+    })().finally(() => { invalidationTask = null; });
+    await invalidationTask;
   }
 
   async function submit(path: string, input: Record<string, unknown>) {
@@ -102,9 +123,7 @@ export function createAuthController(options: AuthControllerOptions) {
         // Token cleanup is best effort while offline.
       }
     }
-    try { await options.tokenStore.remove(); } catch { /* Clear in-memory state even if Keychain is unavailable. */ }
-    token = null;
-    publish({ status: "anonymous", user: null });
+    await invalidateSession();
   }
 
   return {
@@ -112,6 +131,7 @@ export function createAuthController(options: AuthControllerOptions) {
     signIn: (input: { email: string; password: string }) => submit("/api/auth/sign-in/email", input),
     signUp: (input: { name: string; email: string; password: string }) => submit("/api/auth/sign-up/email", input),
     signOut,
+    invalidateSession,
     getSnapshot: () => snapshot,
     subscribe(listener: () => void) { listeners.add(listener); return () => listeners.delete(listener); },
   };

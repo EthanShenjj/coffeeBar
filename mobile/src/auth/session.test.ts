@@ -34,16 +34,19 @@ describe("mobile bearer session", () => {
     await store.set("expired");
     const navigate = vi.fn();
     const clearSessionQuery = vi.fn();
+    const invalidateSession = vi.fn(async () => store.remove());
     const client = createApiClient({
       baseUrl: "https://api.example.com", tokenStore: store, navigate,
       fetcher: vi.fn(async () => Response.json({ error: { code: "UNAUTHORIZED", message: "expired" } }, { status: 401 })),
       getCurrentPath: () => "/orders/o1",
-      clearSessionQuery,
+      clearSensitiveSessionQueries: clearSessionQuery,
+      invalidateSession,
     });
     await expect(client.get("/api/v1/me/orders/o1")).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     expect(await store.get()).toBeNull();
     expect(window.sessionStorage.getItem("coffeebar.intended-route")).toBe("/orders/o1");
     expect(clearSessionQuery).toHaveBeenCalledOnce();
+    expect(invalidateSession).toHaveBeenCalledOnce();
     expect(navigate).toHaveBeenCalledWith("/login", { replace: true });
   });
 

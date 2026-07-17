@@ -21,7 +21,8 @@ type ClientOptions = {
   fetcher?: (input: string, init?: RequestInit) => Promise<Response>;
   navigate?: (path: string, options?: { replace?: boolean }) => void;
   getCurrentPath?: () => string;
-  clearSessionQuery?: () => Promise<void> | void;
+  invalidateSession: () => Promise<void>;
+  clearSensitiveSessionQueries: () => Promise<void> | void;
 };
 
 type RequestOptions<T> = RequestInit & { schema?: z.ZodType<T>; authenticated?: boolean };
@@ -38,16 +39,13 @@ export function createApiClient(options: ClientOptions) {
     unauthorizedTask ??= (async () => {
       saveIntendedRoute(options.getCurrentPath?.() ?? `${window.location.pathname}${window.location.search}`);
       try {
-        await options.tokenStore.remove();
-      } catch {
-        // Continue clearing in-memory state if secure storage is unavailable.
-      }
-      try {
-        await options.clearSessionQuery?.();
-      } catch {
-        // Navigation must still complete.
+        await options.invalidateSession();
       } finally {
-        options.navigate?.("/login", { replace: true });
+        try {
+          await options.clearSensitiveSessionQueries();
+        } finally {
+          options.navigate?.("/login", { replace: true });
+        }
       }
     })().finally(() => { unauthorizedTask = null; });
     await unauthorizedTask;
