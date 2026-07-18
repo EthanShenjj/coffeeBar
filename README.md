@@ -53,6 +53,14 @@ npm run dev
 
 Web 与 API 继续部署在 Vercel；iOS 页面由 `mobile/` 构建并打包进 `mobile/ios/`，不是从 Vercel 在线加载页面。App 只通过 HTTPS 请求 Vercel API。
 
+日常浏览器手机尺寸预览只需启动移动端。Vite 开发服务器会把 `/api/*` 同源代理到 `https://coffeebar-navy.vercel.app`，无需同时运行本地 Next.js，也不需要放宽生产 CORS：
+
+```bash
+npm --workspace @coffeebar/mobile run dev
+```
+
+打开 `http://localhost:5173`。该代理只在 Vite 开发服务器中生效，不会写入 iOS 生产 bundle。
+
 ```bash
 npm run mobile:test
 npm run mobile:build
