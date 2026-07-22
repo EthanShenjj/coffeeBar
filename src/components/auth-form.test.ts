@@ -3,16 +3,15 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("auth form analytics", () => {
-  it("reports regist before the automatic login created by registration", () => {
+  it("reports registration without misclassifying it as a login", () => {
     const source = readFileSync(path.resolve(process.cwd(), "src/components/auth-form.tsx"), "utf8");
     const registrationBranch = source.indexOf('if (mode === "signup")');
-    const registEvent = source.indexOf('trackAnalytics("regist"', registrationBranch);
-    const automaticLoginEvent = source.indexOf('login_method: "signup_auto_login"');
+    const registerEvent = source.indexOf('trackAnalytics("register"', registrationBranch);
 
     expect(registrationBranch).toBeGreaterThan(-1);
-    expect(registEvent).toBeGreaterThan(registrationBranch);
-    expect(automaticLoginEvent).toBeGreaterThan(registEvent);
-    expect(source.indexOf("registrationDeviceProfileProperties()", registEvent)).toBeGreaterThan(registEvent);
+    expect(registerEvent).toBeGreaterThan(registrationBranch);
+    expect(source.indexOf("registrationDeviceProfileProperties()", registerEvent)).toBeGreaterThan(registerEvent);
+    expect(source).not.toContain('login_method: "signup_auto_login"');
   });
 
   it("reports email-password login separately from registration", () => {
@@ -21,6 +20,7 @@ describe("auth form analytics", () => {
 
     expect(manualLoginBranch).toBeGreaterThan(-1);
     expect(source.indexOf('trackAnalytics("login"', manualLoginBranch - 150)).toBeGreaterThan(-1);
-    expect(source.match(/trackAnalytics\("regist"/g)).toHaveLength(1);
+    expect(source.match(/trackAnalytics\("register"/g)).toHaveLength(1);
+    expect(source.match(/trackAnalytics\("login"/g)).toHaveLength(1);
   });
 });

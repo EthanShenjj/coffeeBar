@@ -94,8 +94,8 @@ describe("mobile customer routes", () => {
     await user.type(screen.getByLabelText("姓名"), "Alice"); await user.type(screen.getByLabelText("邮箱"), "alice@example.com"); await user.type(screen.getByLabelText("密码"), "password1");
     await user.click(screen.getByRole("button", { name: "注册" }));
     await waitFor(() => expect(services.analytics.track).toHaveBeenCalledWith("auth_submitted", expect.objectContaining({ auth_mode: "signup" })));
-    expect(services.analytics.track).toHaveBeenCalledWith("regist", expect.objectContaining({ regist_method: "email_password" }));
-    expect(services.analytics.track).toHaveBeenCalledWith("login", expect.objectContaining({ login_method: "signup_auto_login" }));
+    expect(services.analytics.track).toHaveBeenCalledWith("register", expect.objectContaining({ register_method: "email_password" }));
+    expect(services.analytics.track).not.toHaveBeenCalledWith("login", expect.objectContaining({ auth_mode: "signup" }));
     expect(services.analytics.track).toHaveBeenCalledWith("page_viewed", expect.objectContaining({ page_name: "register", path: "/register" }));
   });
 });

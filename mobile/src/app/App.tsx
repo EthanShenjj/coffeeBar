@@ -231,8 +231,7 @@ function AuthForm({ mode, controller }: { mode: "login" | "register"; controller
     try {
       const user = mode === "login" ? await controller.signIn({ email: String(values.email), password: String(values.password) }) : await controller.signUp({ name: String(values.name), email: String(values.email), password: String(values.password) });
       if (mode === "register") {
-        await analytics.track("regist", { user_id: user.id, auth_mode: authMode, has_next: hasNext, regist_method: "email_password" });
-        await analytics.track("login", { user_id: user.id, auth_mode: authMode, has_next: hasNext, login_method: "signup_auto_login" });
+        await analytics.track("register", { user_id: user.id, auth_mode: authMode, has_next: hasNext, register_method: "email_password" });
       } else {
         await analytics.track("login", { user_id: user.id, auth_mode: authMode, has_next: hasNext, login_method: "email_password" });
       }
