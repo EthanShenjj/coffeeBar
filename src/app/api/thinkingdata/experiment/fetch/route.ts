@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const requestTimeoutMs = 500;
+const requestTimeoutMs = 3_000;
 const maxAttempts = 3;
 const maxPayloadBytes = 64 * 1024;
 type FetchResult = { body: string; status: number; contentType: string };

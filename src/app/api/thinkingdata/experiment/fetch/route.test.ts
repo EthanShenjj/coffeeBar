@@ -30,7 +30,7 @@ describe("ThinkingData experiment fetch proxy", () => {
     const body = {
       "#account_id": "account-1",
       "#distinct_id": "visitor-1",
-      "#feature_key": ["登录页注册引导文案"],
+      "#feature_key": ["login_registration_copy"],
       "#lib": "tga_js_sdk",
     };
     const response = await POST(new Request("https://coffeebar.test/api/thinkingdata/experiment/fetch", {
