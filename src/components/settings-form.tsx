@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/components/i18n-provider";
 import { authClient } from "@/lib/auth-client";
+import { resetAnalyticsIdentity } from "@/lib/analytics";
 
 type ProfileValues = { name: string; phone: string; birthday: string };
 
@@ -72,6 +73,7 @@ export function SettingsForm({
   async function signOut() {
     setPending(true);
     await authClient.signOut();
+    resetAnalyticsIdentity();
     router.push("/login");
     router.refresh();
   }

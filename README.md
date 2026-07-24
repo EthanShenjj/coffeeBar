@@ -41,6 +41,7 @@ npm run dev
 - `NEXT_PUBLIC_MIXPANEL_PROJECT_TOKEN`: Mixpanel 项目的 Project Token，用于前端行为事件上报
 - `NEXT_PUBLIC_THINKINGDATA_APP_ID`: ThinkingData 项目的 App ID，用于前端行为事件上报
 - `NEXT_PUBLIC_THINKINGDATA_SERVER_URL`: ThinkingData 数据接收地址，例如 `https://ta-preview.thinkingdata.cn`
+- `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` / `NEXT_PUBLIC_POSTHOG_HOST`: PostHog Web 项目公开令牌和接收地址；复用现有手动事件，不启用自动采集或会话录制
 - `NEXT_PUBLIC_APP_VERSION`: 传给 ThinkingData A/B 分流服务的 Web 应用版本
 - `THINKINGDATA_EXPERIMENT_FETCH_URL`: ThinkingData Web Experiment 远端分流 Fetch 完整地址；由实验服务提供方确认，未配置或请求失败时登录页使用原始文案
 - `THINKINGDATA_WEBHOOK_SECRET`: ThinkingData AE Webhook 通道鉴权密钥；配置后接口会校验 `X-AE-OPS-Signature` / `X-TE-OPS-Signature` 的 HmacSHA1 签名

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { authClient } from "@/lib/auth-client";
+import { resetAnalyticsIdentity } from "@/lib/analytics";
 import { useI18n } from "@/components/i18n-provider";
 
 export function UserMenu({ name, image }: { name?: string | null; image?: string | null }) {
@@ -36,6 +37,7 @@ export function UserMenu({ name, image }: { name?: string | null; image?: string
   async function signOut() {
     setPending(true);
     await authClient.signOut();
+    resetAnalyticsIdentity();
     setOpen(false);
     setPending(false);
     router.push("/");

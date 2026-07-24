@@ -2,7 +2,9 @@
 
 import * as amplitude from "@amplitude/analytics-browser";
 import mixpanel from "mixpanel-browser";
+import posthog from "posthog-js";
 import type { ProductView } from "@/lib/types";
+import { createPostHogAnalytics } from "@/lib/posthog-analytics";
 
 type AnalyticsValue = string | number | boolean | null | undefined | string[] | number[] | boolean[];
 export type AnalyticsProperties = Record<string, AnalyticsValue>;
@@ -11,8 +13,14 @@ const amplitudeApiKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY;
 const mixpanelProjectToken = process.env.NEXT_PUBLIC_MIXPANEL_PROJECT_TOKEN;
 const thinkingDataAppId = process.env.NEXT_PUBLIC_THINKINGDATA_APP_ID;
 const thinkingDataServerUrl = process.env.NEXT_PUBLIC_THINKINGDATA_SERVER_URL;
+const postHogProjectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+const postHogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST;
 const thinkingDataEnabled = Boolean(thinkingDataAppId && thinkingDataServerUrl);
-const enabled = Boolean(amplitudeApiKey || mixpanelProjectToken || thinkingDataEnabled);
+const postHogAnalytics = createPostHogAnalytics(posthog, {
+  token: postHogProjectToken,
+  host: postHogHost,
+});
+const enabled = Boolean(amplitudeApiKey || mixpanelProjectToken || thinkingDataEnabled || (postHogProjectToken && postHogHost));
 
 let initialized = false;
 type ThinkingDataClient = {
@@ -148,6 +156,7 @@ export function initAnalytics() {
   }
 
   initThinkingData();
+  postHogAnalytics.init();
 
   initialized = true;
 }
@@ -164,6 +173,7 @@ export function trackAnalytics(eventName: string, properties: AnalyticsPropertie
   if (amplitudeApiKey) amplitude.track(eventName, payload);
   if (mixpanelProjectToken) mixpanel.track(eventName, payload);
   trackThinkingData(eventName, payload);
+  postHogAnalytics.capture(eventName, payload);
 }
 
 export function identifyAnalytics(userId?: string | null, properties: AnalyticsProperties = {}) {
@@ -187,6 +197,14 @@ export function identifyAnalytics(userId?: string | null, properties: AnalyticsP
       pendingThinkingDataIdentity = { userId, properties: payload };
     }
   }
+  postHogAnalytics.identify(userId, payload);
+}
+
+export function resetAnalyticsIdentity() {
+  if (!enabled) return;
+  if (amplitudeApiKey) amplitude.setUserId(undefined);
+  if (mixpanelProjectToken) mixpanel.reset();
+  postHogAnalytics.reset();
 }
 
 export async function getThinkingDataIdentity(timeoutMs = 500) {
