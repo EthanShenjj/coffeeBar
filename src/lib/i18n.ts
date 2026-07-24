@@ -275,6 +275,7 @@ const english: Record<string, string> = {
   "忘记密码": "Forgot password",
   "欢迎回来": "Welcome back",
   "注册成功，欢迎加入 CoffeeBar": "Account created—welcome to CoffeeBar",
+  "注册成功，请登录": "Account created. Please sign in.",
   "还没有账号？立即注册": "New here? Create an account",
   "已有账号？返回登录": "Already have an account? Sign in",
   "继续即表示你同意 CoffeeBar 的服务条款与隐私政策。": "By continuing, you agree to CoffeeBar's Terms of Service and Privacy Policy.",

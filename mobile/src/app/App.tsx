@@ -231,10 +231,12 @@ function AuthForm({ mode, controller }: { mode: "login" | "register"; controller
       const user = mode === "login" ? await controller.signIn({ email: String(values.email), password: String(values.password) }) : await controller.signUp({ name: String(values.name), email: String(values.email), password: String(values.password) });
       if (mode === "register") {
         await analytics.track("register", { user_id: user.id, has_next: hasNext, register_method: "email_password" });
+        await controller.signOut();
+        navigate("/login", { replace: true });
       } else {
         await analytics.track("login", { user_id: user.id, has_next: hasNext, login_method: "email_password" });
+        navigate(consumeIntendedRoute("/member"), { replace: true });
       }
-      navigate(consumeIntendedRoute("/member"), { replace: true });
     } catch (cause) { setError(t(safeAuthError(mode, cause))); void analytics.track(mode === "register" ? "register_failed" : "login_failed", { has_next: hasNext }); } finally { setSubmitting(false); }
   }
   return <main id="main-content" className="page"><h1>{title}</h1><form onSubmit={submit}>{mode === "register" && <label>{t("姓名")}<input name="name" autoComplete="name" required minLength={2} /></label>}<label>{t("邮箱")}<input name="email" type="email" autoComplete="email" required /></label><label>{t("密码")}<input name="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={8} /></label>{error && <p role="alert" className="form-error">{error}</p>}<button type="submit" disabled={submitting}>{submitting ? t("请稍候…") : title}</button></form><Link to={mode === "login" ? "/register" : "/login"}>{t(mode === "login" ? "创建账户" : "已有账户？登录")}</Link></main>;

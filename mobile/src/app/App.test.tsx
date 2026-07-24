@@ -89,6 +89,19 @@ describe("mobile customer routes", () => {
     expect(screen.getByRole("alert")).not.toHaveTextContent("database");
   });
 
+  it("returns newly registered users to login after clearing the registration session", async () => {
+    const user = userEvent.setup();
+    const { controller } = setup("/register", { status: "anonymous", user: null });
+
+    await user.type(screen.getByLabelText("姓名"), "Alice");
+    await user.type(screen.getByLabelText("邮箱"), "alice@example.com");
+    await user.type(screen.getByLabelText("密码"), "password1");
+    await user.click(screen.getByRole("button", { name: "注册" }));
+
+    await waitFor(() => expect(controller.signOut).toHaveBeenCalledOnce());
+    expect(await screen.findByRole("heading", { name: "登录" })).toBeInTheDocument();
+  });
+
   it("reports registration as dedicated events without an auth_mode property", async () => {
     const user = userEvent.setup(); const { services } = setup("/register", { status: "anonymous", user: null });
     await user.type(screen.getByLabelText("姓名"), "Alice"); await user.type(screen.getByLabelText("邮箱"), "alice@example.com"); await user.type(screen.getByLabelText("密码"), "password1");
