@@ -89,13 +89,26 @@ describe("mobile customer routes", () => {
     expect(screen.getByRole("alert")).not.toHaveTextContent("database");
   });
 
-  it("preserves the existing auth and page analytics event semantics", async () => {
+  it("reports registration as dedicated events without an auth_mode property", async () => {
     const user = userEvent.setup(); const { services } = setup("/register", { status: "anonymous", user: null });
     await user.type(screen.getByLabelText("姓名"), "Alice"); await user.type(screen.getByLabelText("邮箱"), "alice@example.com"); await user.type(screen.getByLabelText("密码"), "password1");
     await user.click(screen.getByRole("button", { name: "注册" }));
-    await waitFor(() => expect(services.analytics.track).toHaveBeenCalledWith("auth_submitted", expect.objectContaining({ auth_mode: "signup" })));
+    await waitFor(() => expect(services.analytics.track).toHaveBeenCalledWith("register_submitted", expect.any(Object)));
     expect(services.analytics.track).toHaveBeenCalledWith("register", expect.objectContaining({ register_method: "email_password" }));
-    expect(services.analytics.track).not.toHaveBeenCalledWith("login", expect.objectContaining({ auth_mode: "signup" }));
+    expect(services.analytics.track).not.toHaveBeenCalledWith("register", expect.objectContaining({ auth_mode: expect.anything() }));
+    expect(services.analytics.track).not.toHaveBeenCalledWith("auth_submitted", expect.anything());
+    expect(services.analytics.track).not.toHaveBeenCalledWith("login", expect.anything());
     expect(services.analytics.track).toHaveBeenCalledWith("page_viewed", expect.objectContaining({ page_name: "register", path: "/register" }));
+  });
+
+  it("reports login as dedicated events without an auth_mode property", async () => {
+    const user = userEvent.setup(); const { services } = setup("/login", { status: "anonymous", user: null });
+    await user.type(screen.getByLabelText("邮箱"), "a@example.com"); await user.type(screen.getByLabelText("密码"), "password1");
+    await user.click(screen.getByRole("button", { name: "登录" }));
+    await waitFor(() => expect(services.analytics.track).toHaveBeenCalledWith("login_submitted", expect.any(Object)));
+    expect(services.analytics.track).toHaveBeenCalledWith("login", expect.objectContaining({ login_method: "email_password" }));
+    expect(services.analytics.track).not.toHaveBeenCalledWith("login", expect.objectContaining({ auth_mode: expect.anything() }));
+    expect(services.analytics.track).not.toHaveBeenCalledWith("auth_submitted", expect.anything());
+    expect(services.analytics.track).not.toHaveBeenCalledWith("register", expect.anything());
   });
 });

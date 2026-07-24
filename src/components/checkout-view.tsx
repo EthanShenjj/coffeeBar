@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, MapPin, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { orderPaymentSucceededAnalyticsProperties } from "@coffeebar/contracts";
 import { confirmCheckout } from "@/actions/checkout";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
@@ -178,7 +179,11 @@ export function CheckoutView({ kind, direct, giftCardBalance, giftCardPersistent
         giftCardAmount: result.giftCardAmount,
         externalAmount: result.externalAmount,
       });
-      trackAnalytics("order_payment_succeeded", { ...checkoutProperties, order_id: result.orderId, order_amount_cents: result.totalAmount, is_demo: result.demo });
+      trackAnalytics("order_payment_succeeded", {
+        ...checkoutProperties,
+        ...orderPaymentSucceededAnalyticsProperties(result),
+        is_demo: result.demo,
+      });
       await flushAnalytics();
 
       const successParams = new URLSearchParams({

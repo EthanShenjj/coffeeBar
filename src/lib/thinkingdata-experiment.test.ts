@@ -51,7 +51,9 @@ describe("ThinkingData experiment integration", () => {
   });
 
   it("waits for the official SDK's first remote-config fetch before reading a Feature", async () => {
-    const init = vi.fn((config: { onFetchSuccess: () => void }) => config.onFetchSuccess());
+    const init = vi.fn((config: Record<string, unknown>) => {
+      (config.onFetchSuccess as () => void)();
+    });
 
     await initializeOfficialExperimentSdk({
       init,
@@ -71,7 +73,9 @@ describe("ThinkingData experiment integration", () => {
   it("initializes Analytics before loading Remote Config and Experiment", async () => {
     const steps: string[] = [];
     const sdk = {
-      init: (config: { onFetchSuccess: () => void }) => config.onFetchSuccess(),
+      init: (config: Record<string, unknown>) => {
+        (config.onFetchSuccess as () => void)();
+      },
       getValueAsJson: vi.fn(),
     };
 

@@ -107,6 +107,14 @@ export const checkoutResultSchema = z.discriminatedUnion("ok", [
 ]);
 export type CheckoutResult = z.output<typeof checkoutResultSchema>;
 
+export function orderPaymentSucceededAnalyticsProperties(order: { orderId: string; totalAmount: number }) {
+  return {
+    order_id: order.orderId,
+    pay_amount: order.totalAmount / 100,
+    currency: "CNY" as const,
+  };
+}
+
 export const appConfigSchema = z.object({
   minimumIosVersion: z.string().regex(/^\d+\.\d+\.\d+$/),
   maintenance: z.boolean(),

@@ -99,6 +99,17 @@ describe("mobile catalog, carts and checkout", () => {
     expect(services.analytics.track).toHaveBeenCalledWith("payment_submitted", expect.objectContaining({ product_channel: "MENU" }));
     resolve({ ok: true, orderId: "o1", orderNumber: "CB001", totalAmount: 3200, giftCardAmount: 0, externalAmount: 3200, demo: true });
     expect(await screen.findByRole("heading", { name: "下单成功" })).toBeInTheDocument();
+    expect(services.analytics.track).toHaveBeenCalledWith("order_payment_succeeded", expect.objectContaining({
+      order_id: "o1",
+      pay_amount: 32,
+      currency: "CNY",
+    }));
+    expect(services.analytics.track).not.toHaveBeenCalledWith("order_payment_succeeded", expect.objectContaining({
+      order_amount_cents: expect.anything(),
+    }));
+    expect(services.analytics.track).not.toHaveBeenCalledWith("order_payment_succeeded", expect.objectContaining({
+      order_amount_yuan: expect.anything(),
+    }));
     expect(services.carts.MENU.getState().items).toHaveLength(0);
     expect(services.native?.orderSucceeded).toHaveBeenCalledOnce();
     expect(services.native?.requestPushAfterFirstOrder).toHaveBeenCalledOnce();

@@ -40,19 +40,27 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setPending(true);
-    trackAnalytics("auth_submitted", { auth_mode: mode, has_next: Boolean(params.get("next")) });
+    const hasNext = Boolean(params.get("next"));
+    if (mode === "signup") {
+      trackAnalytics("register_submitted", { has_next: hasNext });
+    } else {
+      trackAnalytics("login_submitted", { has_next: hasNext });
+    }
     const result = mode === "login" ? await authClient.signIn.email({ email: form.email, password: form.password }) : await authClient.signUp.email({ name: form.name, email: form.email, password: form.password });
     setPending(false);
     if (result.error) {
-      trackAnalytics("auth_failed", { auth_mode: mode, has_next: Boolean(params.get("next")) });
+      if (mode === "signup") {
+        trackAnalytics("register_failed", { has_next: hasNext });
+      } else {
+        trackAnalytics("login_failed", { has_next: hasNext });
+      }
       return toast.error(result.error.message ?? t("操作失败"));
     }
-    identifyAnalytics(result.data?.user?.id, { auth_mode: mode });
-    const authProperties = { auth_mode: mode, has_next: Boolean(params.get("next")) };
+    identifyAnalytics(result.data?.user?.id);
     if (mode === "signup") {
-      trackAnalytics("register", { ...authProperties, register_method: "email_password", ...registrationDeviceProfileProperties() });
+      trackAnalytics("register", { has_next: hasNext, register_method: "email_password", ...registrationDeviceProfileProperties() });
     } else {
-      trackAnalytics("login", { ...authProperties, login_method: "email_password" });
+      trackAnalytics("login", { has_next: hasNext, login_method: "email_password" });
     }
     toast.success(t(mode === "login" ? "欢迎回来" : "注册成功，欢迎加入 CoffeeBar"));
     router.push(params.get("next") || "/"); router.refresh();

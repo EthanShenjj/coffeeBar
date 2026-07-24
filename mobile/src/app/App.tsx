@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CartKind, CartLine, ProductView } from "@coffeebar/contracts";
+import { orderPaymentSucceededAnalyticsProperties, type CartKind, type CartLine, type ProductView } from "@coffeebar/contracts";
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useStore } from "zustand";
 import type { AuthController, AuthSnapshot } from "../auth/auth-controller";
@@ -200,7 +200,7 @@ function CheckoutPage() {
       } else if (cartSignature(services.carts[kind].getState().items) === submittedSignature) {
         services.carts[kind].getState().clear();
       }
-      void services.analytics.track("order_payment_succeeded", { order_id: response.orderId, order_amount_cents: response.totalAmount });
+      void services.analytics.track("order_payment_succeeded", orderPaymentSucceededAnalyticsProperties(response));
       void services.native?.orderSucceeded();
       void services.native?.requestPushAfterFirstOrder();
     } catch { void services.analytics.track("order_payment_failed", { product_channel: kind }); void services.native?.operationFailed(); } finally { submitInFlight.current = false; }
@@ -225,18 +225,17 @@ function AuthForm({ mode, controller }: { mode: "login" | "register"; controller
   const title = mode === "login" ? c.login : c.register;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget)); setSubmitting(true); setError(null);
-    const authMode = mode === "register" ? "signup" : "login";
     const hasNext = Boolean(window.sessionStorage.getItem("coffeebar.intended-route"));
-    void analytics.track("auth_submitted", { auth_mode: authMode, has_next: hasNext });
+    void analytics.track(mode === "register" ? "register_submitted" : "login_submitted", { has_next: hasNext });
     try {
       const user = mode === "login" ? await controller.signIn({ email: String(values.email), password: String(values.password) }) : await controller.signUp({ name: String(values.name), email: String(values.email), password: String(values.password) });
       if (mode === "register") {
-        await analytics.track("register", { user_id: user.id, auth_mode: authMode, has_next: hasNext, register_method: "email_password" });
+        await analytics.track("register", { user_id: user.id, has_next: hasNext, register_method: "email_password" });
       } else {
-        await analytics.track("login", { user_id: user.id, auth_mode: authMode, has_next: hasNext, login_method: "email_password" });
+        await analytics.track("login", { user_id: user.id, has_next: hasNext, login_method: "email_password" });
       }
       navigate(consumeIntendedRoute("/member"), { replace: true });
-    } catch (cause) { setError(t(safeAuthError(mode, cause))); void analytics.track("auth_failed", { auth_mode: authMode, has_next: hasNext }); } finally { setSubmitting(false); }
+    } catch (cause) { setError(t(safeAuthError(mode, cause))); void analytics.track(mode === "register" ? "register_failed" : "login_failed", { has_next: hasNext }); } finally { setSubmitting(false); }
   }
   return <main id="main-content" className="page"><h1>{title}</h1><form onSubmit={submit}>{mode === "register" && <label>{t("姓名")}<input name="name" autoComplete="name" required minLength={2} /></label>}<label>{t("邮箱")}<input name="email" type="email" autoComplete="email" required /></label><label>{t("密码")}<input name="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={8} /></label>{error && <p role="alert" className="form-error">{error}</p>}<button type="submit" disabled={submitting}>{submitting ? t("请稍候…") : title}</button></form><Link to={mode === "login" ? "/register" : "/login"}>{t(mode === "login" ? "创建账户" : "已有账户？登录")}</Link></main>;
 }

@@ -1,4 +1,5 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
+import * as contracts from "./index";
 import {
   CHECKOUT_MAX_ITEM_LINES,
   CHECKOUT_MAX_OPTION_IDS,
@@ -32,6 +33,18 @@ const orderSummary = { id: "o1", orderNumber: "CB2607171", status: "PAID", total
 const orderDetail = { id: "o1", orderNumber: "CB2607171", kind: "MENU", status: "PAID", totalAmount: 6800, pickupName: "林墨", pickupPhone: "13800138000", pickupAt: "2026-07-17T10:00:00.000Z", note: null, paidAt: "2026-07-17T09:00:00.000Z", createdAt: "2026-07-17T09:00:00.000Z", items: [orderItem] };
 
 describe("shared API contracts", () => {
+  it("builds payment-success analytics amounts in yuan", () => {
+    const build = (contracts as Record<string, unknown>).orderPaymentSucceededAnalyticsProperties;
+    expect(typeof build).toBe("function");
+    if (typeof build !== "function") return;
+
+    expect(build({ orderId: "order-1", totalAmount: 2_000 })).toEqual({
+      order_id: "order-1",
+      pay_amount: 20,
+      currency: "CNY",
+    });
+  });
+
   it("accepts only the documented API error codes", () => {
     expect(apiErrorCodeSchema.options).toEqual([
       "VALIDATION_ERROR", "UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND",
